@@ -10,7 +10,7 @@ Firefox extension (Manifest V2) that customizes the chat width on claude.ai. All
 
 ```bash
 # Build XPI package (from project root)
-zip -r build/claude-width-customizer-v1.5.0.xpi . -x "*.git*" -x "build/*" -x "*.DS_Store" -x "CLAUDE.md" -x ".claude/*"
+zip -r build/claude-width-customizer-v1.5.1.xpi . -x "*.git*" -x "build/*" -x "*.DS_Store" -x "CLAUDE.md" -x ".claude/*"
 
 # Development testing (no build step required)
 # 1. Open Firefox → about:debugging → This Firefox
@@ -65,6 +65,18 @@ The extension must NOT affect sidebar elements. `isInsideSidebar()` walks up the
 | `THEME_STORAGE_KEY` | `theme` | popup.js |
 | `DEFAULT_THEME` | `system` | popup.js |
 | `VALID_THEMES` | `['light', 'dark', 'system']` | popup.js |
+
+## Mozilla Add-ons Compliance
+
+The extension includes `data_collection_permissions` in `manifest.json` under `browser_specific_settings.gecko`:
+
+```json
+"data_collection_permissions": {
+    "required": ["none"]
+}
+```
+
+This declares that the extension does not collect or transmit any user data, which is required for submission to addons.mozilla.org (effective November 2025).
 
 ## Theme System
 

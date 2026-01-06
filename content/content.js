@@ -11,7 +11,7 @@
  * - Better element targeting with debug logging
  * 
  * @author DoubleGate
- * @version 1.5.0
+ * @version 1.5.1
  * @license MIT
  */
 
@@ -255,7 +255,7 @@
         
         const css = `
             /*
-             * Claude Chat Width Customizer - Minimal CSS v1.5.0
+             * Claude Chat Width Customizer - Minimal CSS v1.5.1
              */
 
             /* Smooth transitions for styled elements */
@@ -437,7 +437,7 @@
     // =========================================================================
 
     async function initialize() {
-        console.log('[Claude Width] Initializing content script v1.5.0...');
+        console.log('[Claude Width] Initializing content script v1.5.1...');
         
         try {
             // Load saved preference

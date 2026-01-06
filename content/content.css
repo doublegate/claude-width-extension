@@ -2,14 +2,14 @@
  * Claude Chat Width Customizer - Base Content Styles
  * ===================================================
  * 
- * Version 1.5.0 - Minimal CSS
+ * Version 1.5.1 - Minimal CSS
  * 
  * The JavaScript content script handles all width adjustments using inline styles.
  * This CSS file only provides smooth transitions for elements that have been
  * explicitly marked by the JavaScript.
  * 
  * @author DoubleGate
- * @version 1.5.0
+ * @version 1.5.1
  */
 
 /* 

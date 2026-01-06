@@ -18,7 +18,7 @@
  * - Queries active tabs to determine if user is on claude.ai
  * 
  * @author DoubleGate
- * @version 1.5.0
+ * @version 1.5.1
  * @license MIT
  */
 

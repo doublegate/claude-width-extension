@@ -14,6 +14,7 @@ A Firefox extension that allows you to customize the width of the text input/out
 - **Main Window Only**: Modifies only the main chat area, leaving the sidebar untouched
 - **SPA Compatible**: Works seamlessly with Claude's single-page application navigation
 - **Security Hardened**: Content Security Policy (CSP) enforced, no unsafe DOM operations
+- **Mozilla Add-ons Compliant**: Includes required `data_collection_permissions` declaration
 
 ## Installation
 
@@ -39,7 +40,7 @@ A Firefox extension that allows you to customize the width of the text input/out
 cd claude-width-extension
 
 # Create the XPI file (ZIP with .xpi extension)
-zip -r build/claude-width-customizer-v1.5.0.xpi . -x "*.git*" -x "build/*" -x "*.DS_Store" -x "CLAUDE.md" -x ".claude/*"
+zip -r build/claude-width-customizer-v1.5.1.xpi . -x "*.git*" -x "build/*" -x "*.DS_Store" -x "CLAUDE.md" -x ".claude/*"
 ```
 
 ## Usage
@@ -144,6 +145,11 @@ MIT License - feel free to modify and distribute.
 DoubleGate - [GitHub](https://github.com/doublegate)
 
 ## Changelog
+
+### v1.5.1 (Mozilla Add-ons Compliance)
+- **Compliance**: Added `data_collection_permissions` property to manifest for Mozilla Add-on Developer Hub submission
+- Extension declares `required: ["none"]` - no user data is collected or transmitted
+- No functional changes from v1.5.0
 
 ### v1.5.0 (Theme Support & Security)
 - **New**: Light/Dark/System theme toggle for extension popup
