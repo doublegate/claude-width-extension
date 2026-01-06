@@ -1,0 +1,43 @@
+{
+  "manifest_version": 2,
+  "name": "Claude Chat Width Customizer",
+  "version": "1.4.0",
+  "description": "Customize the width of text input/output boxes in Claude.AI chat sessions",
+  "author": "DoubleGate",
+  "homepage_url": "https://github.com/doublegate/claude-width-extension",
+
+  "icons": {
+    "48": "icons/icon-48.png",
+    "96": "icons/icon-96.png"
+  },
+
+  "permissions": [
+    "storage",
+    "activeTab"
+  ],
+
+  "browser_action": {
+    "default_icon": {
+      "48": "icons/icon-48.png",
+      "96": "icons/icon-96.png"
+    },
+    "default_title": "Claude Chat Width",
+    "default_popup": "popup/popup.html"
+  },
+
+  "content_scripts": [
+    {
+      "matches": ["*://claude.ai/*"],
+      "js": ["content/content.js"],
+      "css": ["content/content.css"],
+      "run_at": "document_end"
+    }
+  ],
+
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "claude-width@lparobek.dev",
+      "strict_min_version": "109.0"
+    }
+  }
+}

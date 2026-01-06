@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" fill="none">
+  <!-- Background circle with Claude's terracotta color -->
+  <circle cx="48" cy="48" r="44" fill="#D97757"/>
+  
+  <!-- Inner lighter circle -->
+  <circle cx="48" cy="48" r="36" fill="#E8A08A" opacity="0.3"/>
+  
+  <!-- Width adjustment icon - horizontal resize arrows -->
+  <g stroke="#FFFFFF" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Left arrow -->
+    <path d="M20 48 L32 48"/>
+    <path d="M26 42 L20 48 L26 54"/>
+    
+    <!-- Right arrow -->
+    <path d="M64 48 L76 48"/>
+    <path d="M70 42 L76 48 L70 54"/>
+    
+    <!-- Center bars representing content -->
+    <rect x="38" y="32" width="20" height="32" rx="3" fill="none" stroke-width="3"/>
+    <line x1="42" y1="40" x2="54" y2="40" stroke-width="2"/>
+    <line x1="42" y1="48" x2="54" y2="48" stroke-width="2"/>
+    <line x1="42" y1="56" x2="50" y2="56" stroke-width="2"/>
+  </g>
+</svg>
