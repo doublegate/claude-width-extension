@@ -9,9 +9,11 @@ A Firefox extension that allows you to customize the width of the text input/out
 - **Adjustable Width**: Set chat width from 40% to 100% of the viewport
 - **Quick Presets**: One-click buttons for Narrow (50%), Medium (70%), Wide (85%), and Full (100%) widths
 - **Real-time Preview**: See changes instantly as you adjust the slider
-- **Persistent Settings**: Your preference is saved and applied to all Claude sessions
+- **Theme Support**: Light, Dark, and System theme modes for the extension popup
+- **Persistent Settings**: Your preferences (width and theme) are saved and applied to all Claude sessions
 - **Main Window Only**: Modifies only the main chat area, leaving the sidebar untouched
 - **SPA Compatible**: Works seamlessly with Claude's single-page application navigation
+- **Security Hardened**: Content Security Policy (CSP) enforced, no unsafe DOM operations
 
 ## Installation
 
@@ -37,7 +39,7 @@ A Firefox extension that allows you to customize the width of the text input/out
 cd claude-width-extension
 
 # Create the XPI file (ZIP with .xpi extension)
-zip -r ../claude-width-customizer.xpi . -x "*.git*" -x "*.DS_Store"
+zip -r build/claude-width-customizer-v1.5.0.xpi . -x "*.git*" -x "build/*" -x "*.DS_Store" -x "CLAUDE.md" -x ".claude/*"
 ```
 
 ## Usage
@@ -51,6 +53,7 @@ zip -r ../claude-width-customizer.xpi . -x "*.git*" -x "*.DS_Store"
 
 | Control | Description |
 |---------|-------------|
+| **Theme Toggle** | Switch between Light, Dark, or System theme |
 | **Slider** | Drag to set width between 40-100% |
 | **Narrow** | Sets width to 50% |
 | **Medium** | Sets width to 70% |
@@ -141,6 +144,15 @@ MIT License - feel free to modify and distribute.
 DoubleGate - [GitHub](https://github.com/doublegate)
 
 ## Changelog
+
+### v1.5.0 (Theme Support & Security)
+- **New**: Light/Dark/System theme toggle for extension popup
+- **New**: Dark mode color palette with warm tones matching Claude's aesthetic
+- **New**: System theme respects OS `prefers-color-scheme` setting
+- **Security**: Added Content Security Policy (CSP) to manifest
+- **Security**: Replaced `innerHTML` with safe DOM manipulation APIs
+- **UI**: Updated popup title to "Claude.AI Chat Width"
+- Theme preference persists across browser sessions via `browser.storage.local`
 
 ### v1.4.0 (Public Release)
 - Updated author and repository information

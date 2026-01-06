@@ -18,7 +18,7 @@
  * - Queries active tabs to determine if user is on claude.ai
  * 
  * @author DoubleGate
- * @version 1.4.0
+ * @version 1.5.0
  * @license MIT
  */
 
@@ -64,6 +64,24 @@
         100: 'full'
     };
 
+    /**
+     * Storage key for theme preference.
+     * @type {string}
+     */
+    const THEME_STORAGE_KEY = 'theme';
+
+    /**
+     * Default theme (system).
+     * @type {string}
+     */
+    const DEFAULT_THEME = 'system';
+
+    /**
+     * Valid theme values.
+     * @type {string[]}
+     */
+    const VALID_THEMES = ['light', 'dark', 'system'];
+
     // =========================================================================
     // DOM REFERENCES
     // =========================================================================
@@ -108,6 +126,11 @@
      */
     let resetButton;
 
+    /**
+     * @type {NodeListOf<HTMLButtonElement>}
+     */
+    let themeButtons;
+
     // =========================================================================
     // STATE
     // =========================================================================
@@ -130,6 +153,12 @@
      */
     let isOnClaudeTab = false;
 
+    /**
+     * Current theme preference.
+     * @type {string}
+     */
+    let currentTheme = DEFAULT_THEME;
+
     // =========================================================================
     // INITIALIZATION
     // =========================================================================
@@ -147,11 +176,13 @@
         presetButtons = document.querySelectorAll('.preset-btn');
         applyButton = document.getElementById('applyBtn');
         resetButton = document.getElementById('resetBtn');
+        themeButtons = document.querySelectorAll('.theme-btn');
 
         // Set up event listeners
         setupEventListeners();
 
-        // Load saved preference and check status
+        // Load saved preferences and check status
+        loadSavedTheme();
         loadSavedPreference();
         checkClaudeTabStatus();
     }
@@ -179,6 +210,11 @@
 
         // Keyboard accessibility for slider
         sliderElement.addEventListener('keydown', handleSliderKeydown);
+
+        // Theme buttons
+        themeButtons.forEach(button => {
+            button.addEventListener('click', handleThemeClick);
+        });
     }
 
     // =========================================================================
@@ -272,6 +308,23 @@
         }
     }
 
+    /**
+     * Handle theme button clicks.
+     *
+     * @param {MouseEvent} event - The click event
+     */
+    function handleThemeClick(event) {
+        const button = event.currentTarget;
+        const theme = button.dataset.theme;
+
+        if (VALID_THEMES.includes(theme)) {
+            currentTheme = theme;
+            applyTheme(theme);
+            updateThemeButtons(theme);
+            saveTheme(theme);
+        }
+    }
+
     // =========================================================================
     // UI UPDATES
     // =========================================================================
@@ -302,13 +355,35 @@
 
     /**
      * Highlight the preset button matching current width, if any.
-     * 
+     *
      * @param {number} width - Current width value
      */
     function updatePresetHighlight(width) {
         presetButtons.forEach(button => {
             const presetWidth = parseInt(button.dataset.width, 10);
             button.classList.toggle('active', presetWidth === width);
+        });
+    }
+
+    /**
+     * Apply theme to the document.
+     *
+     * @param {string} theme - Theme to apply ('light', 'dark', or 'system')
+     */
+    function applyTheme(theme) {
+        document.documentElement.setAttribute('data-theme', theme);
+    }
+
+    /**
+     * Update theme button states.
+     *
+     * @param {string} activeTheme - Currently active theme
+     */
+    function updateThemeButtons(activeTheme) {
+        themeButtons.forEach(button => {
+            const isActive = button.dataset.theme === activeTheme;
+            button.classList.toggle('active', isActive);
+            button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
         });
     }
 
@@ -332,19 +407,33 @@
 
     /**
      * Show visual feedback when apply button is clicked.
+     * Uses DOM manipulation instead of innerHTML for security.
      */
     function showApplyFeedback() {
-        const originalText = applyButton.innerHTML;
-        applyButton.innerHTML = `
-            <svg class="btn-icon" viewBox="0 0 16 16" fill="none">
-                <path d="M13.78 4.22a.75.75 0 010 1.06l-7.25 7.25a.75.75 0 01-1.06 0L2.22 9.28a.75.75 0 011.06-1.06L6 10.94l6.72-6.72a.75.75 0 011.06 0z" fill="currentColor"/>
-            </svg>
-            Saved!
-        `;
+        // Store original children
+        const originalChildren = Array.from(applyButton.childNodes).map(node => node.cloneNode(true));
+
+        // Clear and rebuild with saved state
+        applyButton.textContent = '';
+
+        // Create checkmark SVG using DOM APIs
+        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svg.setAttribute('class', 'btn-icon');
+        svg.setAttribute('viewBox', '0 0 16 16');
+        svg.setAttribute('fill', 'none');
+
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        path.setAttribute('d', 'M13.78 4.22a.75.75 0 010 1.06l-7.25 7.25a.75.75 0 01-1.06 0L2.22 9.28a.75.75 0 011.06-1.06L6 10.94l6.72-6.72a.75.75 0 011.06 0z');
+        path.setAttribute('fill', 'currentColor');
+
+        svg.appendChild(path);
+        applyButton.appendChild(svg);
+        applyButton.appendChild(document.createTextNode(' Saved!'));
         applyButton.disabled = true;
-        
+
         setTimeout(() => {
-            applyButton.innerHTML = originalText;
+            applyButton.textContent = '';
+            originalChildren.forEach(child => applyButton.appendChild(child));
             applyButton.disabled = false;
         }, 1000);
     }
@@ -352,6 +441,45 @@
     // =========================================================================
     // STORAGE OPERATIONS
     // =========================================================================
+
+    /**
+     * Load saved theme preference from storage.
+     */
+    async function loadSavedTheme() {
+        try {
+            const result = await browser.storage.local.get(THEME_STORAGE_KEY);
+            const stored = result[THEME_STORAGE_KEY];
+
+            if (stored && VALID_THEMES.includes(stored)) {
+                currentTheme = stored;
+            } else {
+                currentTheme = DEFAULT_THEME;
+            }
+
+            applyTheme(currentTheme);
+            updateThemeButtons(currentTheme);
+
+        } catch (error) {
+            console.error('[Claude Width Popup] Error loading theme:', error);
+            // Use default theme on error
+            applyTheme(DEFAULT_THEME);
+            updateThemeButtons(DEFAULT_THEME);
+        }
+    }
+
+    /**
+     * Save theme preference to storage.
+     *
+     * @param {string} theme - Theme to save
+     */
+    async function saveTheme(theme) {
+        try {
+            await browser.storage.local.set({ [THEME_STORAGE_KEY]: theme });
+            console.log(`[Claude Width Popup] Saved theme: ${theme}`);
+        } catch (error) {
+            console.error('[Claude Width Popup] Error saving theme:', error);
+        }
+    }
 
     /**
      * Load saved width preference from storage.

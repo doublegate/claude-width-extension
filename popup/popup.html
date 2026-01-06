@@ -20,7 +20,7 @@
   - Accessible controls with proper ARIA labels
   
   @author DoubleGate
-  @version 1.4.0
+  @version 1.5.0
 -->
 <html lang="en">
 <head>
@@ -39,15 +39,42 @@
                     <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                     <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
-                <h1 class="popup-title">Chat Width</h1>
+                <h1 class="popup-title">Claude.AI Chat Width</h1>
             </div>
-            <span class="version-badge">v1.4</span>
+            <span class="version-badge">v1.5</span>
         </header>
 
         <!-- Status Indicator -->
         <div class="status-bar" id="statusBar">
             <span class="status-dot" id="statusDot"></span>
             <span class="status-text" id="statusText">Checking...</span>
+        </div>
+
+        <!-- Theme Toggle -->
+        <div class="theme-section">
+            <span class="theme-label">Theme</span>
+            <div class="theme-toggle" role="radiogroup" aria-label="Theme selection">
+                <button class="theme-btn" data-theme="light" title="Light theme" aria-pressed="false">
+                    <svg class="theme-icon" viewBox="0 0 16 16" fill="none">
+                        <path d="M8 1V2M8 14V15M15 8H14M2 8H1M12.95 12.95L12.24 12.24M3.76 3.76L3.05 3.05M12.95 3.05L12.24 3.76M3.76 12.24L3.05 12.95M11 8C11 9.65685 9.65685 11 8 11C6.34315 11 5 9.65685 5 8C5 6.34315 6.34315 5 8 5C9.65685 5 11 6.34315 11 8Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <span>Light</span>
+                </button>
+                <button class="theme-btn" data-theme="dark" title="Dark theme" aria-pressed="false">
+                    <svg class="theme-icon" viewBox="0 0 16 16" fill="none">
+                        <path d="M14 8.5C14 11.5376 11.5376 14 8.5 14C5.96243 14 3.83547 12.3055 3.18141 10C3.06066 9.57066 3 9.11936 3 8.65217C3 5.44784 5.68385 2.84058 9 2.84058C9.10345 2.84058 9.20621 2.8433 9.30823 2.84866C8.49042 3.74759 8 4.95012 8 6.26087C8 9.03201 10.2437 11.2757 13.0149 11.2757C13.3558 11.2757 13.6874 11.2427 14.0074 11.1797C14.0025 11.2863 14 11.393 14 11.5V8.5Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <span>Dark</span>
+                </button>
+                <button class="theme-btn active" data-theme="system" title="System theme" aria-pressed="true">
+                    <svg class="theme-icon" viewBox="0 0 16 16" fill="none">
+                        <path d="M2 4C2 3.44772 2.44772 3 3 3H13C13.5523 3 14 3.44772 14 4V10C14 10.5523 13.5523 11 13 11H3C2.44772 11 2 10.5523 2 10V4Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M5 14H11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                        <path d="M8 11V14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                    </svg>
+                    <span>System</span>
+                </button>
+            </div>
         </div>
 
         <!-- Main Controls -->

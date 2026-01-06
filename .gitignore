@@ -1,7 +1,11 @@
 # Build artifacts
 *.xpi
 *.zip
+build/
 web-ext-artifacts/
+
+# Claude Code settings (local only)
+.claude/
 
 # OS generated files
 .DS_Store

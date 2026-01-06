@@ -1,44 +1,49 @@
 /**
  * Claude Chat Width Customizer - Popup Styles
  * ============================================
- * 
+ *
  * Refined, minimal styling for the extension popup interface.
  * Design inspired by Claude's brand aesthetic: warm neutrals, clean typography,
  * subtle depth through shadows, and polished micro-interactions.
- * 
- * Color Palette:
+ *
+ * Color Palette (Light):
  * - Primary: #D97757 (Claude's terracotta/coral accent)
  * - Background: #FAF9F7 (warm off-white)
  * - Text: #1A1915 (warm dark)
  * - Muted: #6B6B6B (secondary text)
  * - Border: #E5E4E1 (subtle dividers)
- * 
+ *
+ * Color Palette (Dark):
+ * - Primary: #E8957A (lighter terracotta for dark mode)
+ * - Background: #1A1915 (warm dark)
+ * - Text: #F5F4F2 (warm light)
+ *
  * @author DoubleGate
- * @version 1.4.0
+ * @version 1.5.0
  */
 
 /* ===== CSS Custom Properties ===== */
 :root {
-    /* Colors */
+    /* Light theme colors (default) */
     --color-primary: #D97757;
     --color-primary-hover: #C4684A;
     --color-primary-light: rgba(217, 119, 87, 0.1);
-    
+
     --color-bg: #FAF9F7;
     --color-bg-elevated: #FFFFFF;
     --color-bg-hover: #F5F4F2;
-    
+
     --color-text: #1A1915;
     --color-text-secondary: #6B6B6B;
     --color-text-muted: #9A9A9A;
-    
+
     --color-border: #E5E4E1;
     --color-border-strong: #D1D0CD;
-    
+
     --color-success: #22C55E;
     --color-warning: #EAB308;
     --color-error: #EF4444;
-    
+
     /* Typography */
     --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
     --font-size-xs: 11px;
@@ -46,27 +51,71 @@
     --font-size-base: 13px;
     --font-size-lg: 14px;
     --font-size-xl: 24px;
-    
+
     /* Spacing */
     --space-xs: 4px;
     --space-sm: 8px;
     --space-md: 12px;
     --space-lg: 16px;
     --space-xl: 20px;
-    
+
     /* Border Radius */
     --radius-sm: 4px;
     --radius-md: 6px;
     --radius-lg: 8px;
     --radius-full: 9999px;
-    
+
     /* Shadows */
     --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
     --shadow-md: 0 2px 4px rgba(0, 0, 0, 0.08);
-    
+
     /* Transitions */
     --transition-fast: 150ms ease;
     --transition-base: 200ms ease;
+}
+
+/* ===== Dark Theme ===== */
+[data-theme="dark"] {
+    --color-primary: #E8957A;
+    --color-primary-hover: #D97757;
+    --color-primary-light: rgba(232, 149, 122, 0.15);
+
+    --color-bg: #1A1915;
+    --color-bg-elevated: #252420;
+    --color-bg-hover: #2E2D28;
+
+    --color-text: #F5F4F2;
+    --color-text-secondary: #A8A8A8;
+    --color-text-muted: #7A7A7A;
+
+    --color-border: #3A3935;
+    --color-border-strong: #4A4945;
+
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.2);
+    --shadow-md: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* ===== System Theme (respects prefers-color-scheme) ===== */
+@media (prefers-color-scheme: dark) {
+    [data-theme="system"] {
+        --color-primary: #E8957A;
+        --color-primary-hover: #D97757;
+        --color-primary-light: rgba(232, 149, 122, 0.15);
+
+        --color-bg: #1A1915;
+        --color-bg-elevated: #252420;
+        --color-bg-hover: #2E2D28;
+
+        --color-text: #F5F4F2;
+        --color-text-secondary: #A8A8A8;
+        --color-text-muted: #7A7A7A;
+
+        --color-border: #3A3935;
+        --color-border-strong: #4A4945;
+
+        --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.2);
+        --shadow-md: 0 2px 4px rgba(0, 0, 0, 0.3);
+    }
 }
 
 /* ===== Reset & Base ===== */
@@ -181,6 +230,70 @@ body {
 .status-text {
     font-size: var(--font-size-sm);
     color: var(--color-text-secondary);
+}
+
+/* ===== Theme Toggle ===== */
+.theme-section {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-sm) 0;
+}
+
+.theme-label {
+    font-size: var(--font-size-xs);
+    font-weight: 500;
+    color: var(--color-text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.theme-toggle {
+    display: flex;
+    gap: 2px;
+    background-color: var(--color-bg-elevated);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: 2px;
+}
+
+.theme-btn {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    padding: var(--space-xs) var(--space-sm);
+    background: transparent;
+    border: none;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-family: inherit;
+    font-size: var(--font-size-xs);
+    color: var(--color-text-muted);
+    transition: all var(--transition-fast);
+}
+
+.theme-btn:hover {
+    color: var(--color-text-secondary);
+    background-color: var(--color-bg-hover);
+}
+
+.theme-btn.active {
+    background-color: var(--color-primary-light);
+    color: var(--color-primary);
+}
+
+.theme-btn:focus {
+    outline: none;
+}
+
+.theme-btn:focus-visible {
+    box-shadow: 0 0 0 2px var(--color-primary-light);
+}
+
+.theme-icon {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
 }
 
 /* ===== Main Section ===== */
