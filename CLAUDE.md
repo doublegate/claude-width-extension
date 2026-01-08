@@ -4,13 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Firefox extension (Manifest V2) that customizes the chat width on claude.ai. Allows users to adjust the main chat area from 40-100% width via a popup UI, without affecting the sidebar. Version 1.7.0 adds custom preset management with drag-and-drop reordering, favorites, right-click context menu, and recently used widths tracking.
+Firefox extension (Manifest V2) that customizes the chat width on claude.ai. Allows users to adjust the main chat area from 40-100% width via a popup UI, without affecting the sidebar. Version 1.8.0 adds enhanced styling with typography controls (font size, line height, padding), display modes (compact, comfortable, spacious, custom), code block enhancements (max-height, word wrap, collapse all), and visual tweaks (timestamps, avatars, bubble styles).
 
 ## Build & Development
 
 ```bash
 # Build XPI package (from project root)
-zip -r build/claude-width-customizer-v1.7.0.xpi . -x "*.git*" -x "build/*" -x "*.DS_Store" -x "CLAUDE.md" -x ".claude/*" -x "docs/*"
+zip -r build/claude-width-customizer-v1.8.0.xpi . -x "*.git*" -x "build/*" -x "*.DS_Store" -x "CLAUDE.md" -x ".claude/*" -x "docs/*" -x "images/*"
 
 # Development testing (no build step required)
 # 1. Open Firefox → about:debugging → This Firefox
@@ -22,7 +22,7 @@ No npm/node dependencies. Pure vanilla JavaScript.
 
 ## Architecture
 
-### Communication Flow (v1.7.0)
+### Communication Flow (v1.8.0)
 
 ```
                             browser.commands API
@@ -69,7 +69,7 @@ The extension must NOT affect sidebar elements. `isInsideSidebar()` walks up the
 
 | Constant | Value | Location |
 |----------|-------|----------|
-| `DEFAULT_WIDTH_PERCENT` | 70 | content.js, background.js, popup.js |
+| `DEFAULT_WIDTH_PERCENT` | 85 | content.js, background.js, popup.js |
 | `MIN_WIDTH_PERCENT` | 40 | content.js |
 | `MAX_WIDTH_PERCENT` | 100 | content.js |
 | `PRESET_CYCLE` | `[50, 70, 85, 100]` | content.js, background.js |
@@ -78,10 +78,10 @@ The extension must NOT affect sidebar elements. `isInsideSidebar()` walks up the
 | `THEME_STORAGE_KEY` | `theme` | popup.js |
 | `DEFAULT_THEME` | `system` | popup.js |
 | `VALID_THEMES` | `['light', 'dark', 'system']` | popup.js |
-| `BADGE_COLOR` | `#D97757` | background.js |
+| `BADGE_COLOR` | `#6B7280` | background.js |
 | `MAX_CUSTOM_PRESETS` | 4 | popup.js |
 | `MAX_RECENT_WIDTHS` | 3 | popup.js, background.js |
-| `CURRENT_MIGRATION_VERSION` | 1 | background.js |
+| `CURRENT_MIGRATION_VERSION` | 2 | background.js |
 
 ## Keyboard Shortcuts
 
@@ -101,7 +101,7 @@ The extension must NOT affect sidebar elements. `isInsideSidebar()` walks up the
 | 2 | Medium preset (70%) |
 | 3 | Wide preset (85%) |
 | 4 | Full width (100%) |
-| R | Reset to default (70%) |
+| R | Reset to default (85%) |
 | Escape | Close popup |
 | Tab | Focus trap navigation |
 | Alt+Up/Down | Reorder custom presets |
@@ -157,7 +157,7 @@ Right-click on any claude.ai page to access the width context menu:
 
 - **Built-in Presets**: Narrow (50%), Medium (70%), Wide (85%), Full (100%)
 - **Custom Presets**: User-created presets with favorites marked with star
-- **Default (70%)**: Reset to default width
+- **Default (85%)**: Reset to default width
 - **Recently Used**: Last 3 non-preset widths used
 
 The context menu rebuilds dynamically when:
@@ -165,11 +165,48 @@ The context menu rebuilds dynamically when:
 - Presets are favorited/unfavorited
 - New widths are used via slider
 
+## Enhanced Styling (v1.8.0)
+
+The Advanced Styling section provides fine-grained control over Claude's chat appearance:
+
+### Typography Controls
+- **Font Size**: 80-120% slider for message text
+- **Line Height**: Compact (1.2), Normal (1.5), Relaxed (1.8)
+- **Message Padding**: None, Small, Medium, Large
+
+### Display Modes
+- **Compact**: Reduced spacing, smaller UI for more content
+- **Comfortable**: Default balanced spacing
+- **Spacious**: Increased spacing for readability
+- **Custom**: Keep manual typography settings
+
+### Code Block Enhancements
+- **Max Height**: 200px, 400px, 600px, or None (unlimited)
+- **Word Wrap**: Toggle code block text wrapping
+- **Collapse All**: Expand/collapse all code blocks
+
+### Visual Tweaks
+- **Timestamps**: Show/hide message timestamps
+- **Avatars**: Show/hide user and Claude avatars
+- **Bubble Style**: Rounded (default), Square, Minimal
+
+### Storage Keys (Enhanced Styling)
+- `fontSizePercent`: 80-120 (default: 100)
+- `lineHeight`: 'compact', 'normal', 'relaxed' (default: 'normal')
+- `messagePadding`: 'none', 'small', 'medium', 'large' (default: 'medium')
+- `displayMode`: 'compact', 'comfortable', 'spacious', 'custom' (default: 'comfortable')
+- `codeBlockMaxHeight`: 200, 400, 600, 0 (default: 400)
+- `codeBlockWordWrap`: true/false (default: false)
+- `codeBlocksCollapsed`: true/false (default: false)
+- `showTimestamps`: true/false (default: true)
+- `showAvatars`: true/false (default: true)
+- `messageBubbleStyle`: 'rounded', 'square', 'minimal' (default: 'rounded')
+
 ## File Structure
 
 ```
 claude-width-extension/
-├── manifest.json              # Extension manifest (Manifest V2, v1.7.0)
+├── manifest.json              # Extension manifest (Manifest V2, v1.8.0)
 ├── README.md                  # User documentation
 ├── CONTRIBUTING.md            # Contribution guidelines
 ├── LICENSE                    # MIT license
@@ -211,6 +248,7 @@ When Claude updates their UI, selectors may break. Debug process:
 
 | Version | Date | Highlights |
 |---------|------|------------|
+| v1.8.0 | 2026-01-08 | Enhanced styling (typography, display modes, code blocks, visual tweaks), default 85%, grey badge |
 | v1.7.0 | 2026-01-08 | Custom presets (CRUD, drag-drop, favorites), context menu, recent widths, default 70% |
 | v1.6.0 | 2026-01-07 | Keyboard shortcuts, full accessibility, badge, options page |
 | v1.5.1 | 2026-01-06 | Mozilla Add-ons `data_collection_permissions` compliance |

@@ -2,14 +2,19 @@
  * Claude Chat Width Customizer - Base Content Styles
  * ===================================================
  *
- * Version 1.6.0 - Keyboard & Accessibility
+ * Version 1.8.0 - Enhanced Styling
  *
  * The JavaScript content script handles all width adjustments using inline styles.
  * This CSS file provides smooth transitions for elements that have been
  * explicitly marked by the JavaScript, with accessibility support.
  *
+ * Enhanced Styling (v1.8.0):
+ * - Typography transitions (font-size, line-height, padding)
+ * - Code block transitions (max-height, collapse/expand)
+ * - Visual element transitions (opacity for show/hide)
+ *
  * @author DoubleGate
- * @version 1.6.0
+ * @version 1.8.0
  */
 
 /*
@@ -22,6 +27,51 @@
 }
 
 /* =========================================================================
+   ENHANCED STYLING: Transitions for Dynamic Style Changes (v1.8.0)
+   ========================================================================= */
+
+/**
+ * Typography transitions for smooth font-size, line-height, and padding changes.
+ * Applied to message containers and chat elements.
+ */
+[data-claude-enhanced-styles] {
+    transition:
+        font-size 0.2s ease-out,
+        line-height 0.2s ease-out,
+        padding 0.2s ease-out,
+        margin 0.2s ease-out;
+}
+
+/**
+ * Code block transitions for max-height and collapse animations.
+ * Enables smooth expand/collapse behavior.
+ */
+[data-claude-enhanced-styles] pre,
+[data-claude-enhanced-styles] code {
+    transition:
+        max-height 0.3s ease-out,
+        overflow 0.3s ease-out;
+}
+
+/**
+ * Visual element transitions for smooth show/hide of timestamps and avatars.
+ */
+[data-claude-enhanced-styles] [class*="timestamp" i],
+[data-claude-enhanced-styles] [class*="avatar" i] {
+    transition: opacity 0.2s ease-out, visibility 0.2s ease-out;
+}
+
+/**
+ * Message bubble style transitions for border-radius and background changes.
+ */
+[data-claude-enhanced-styles] [class*="message" i] {
+    transition:
+        border-radius 0.2s ease-out,
+        background-color 0.2s ease-out,
+        border-color 0.2s ease-out;
+}
+
+/* =========================================================================
    ACCESSIBILITY: Reduced Motion Support
    ========================================================================= */
 
@@ -31,7 +81,13 @@
  * prefers-reduced-motion enabled in their OS settings.
  */
 @media (prefers-reduced-motion: reduce) {
-    [data-claude-width-applied] {
+    [data-claude-width-applied],
+    [data-claude-enhanced-styles],
+    [data-claude-enhanced-styles] pre,
+    [data-claude-enhanced-styles] code,
+    [data-claude-enhanced-styles] [class*="timestamp" i],
+    [data-claude-enhanced-styles] [class*="avatar" i],
+    [data-claude-enhanced-styles] [class*="message" i] {
         transition: none !important;
     }
 }

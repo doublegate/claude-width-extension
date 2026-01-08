@@ -11,6 +11,7 @@ A Firefox extension that allows you to customize the width of the text input/out
 - **Custom Presets**: Create up to 4 custom presets with your favorite widths, drag-and-drop reordering, and favorites marking
 - **Context Menu**: Right-click on claude.ai pages to quickly access all presets
 - **Recently Used**: Quick access to your last 3 used widths
+- **Enhanced Styling** (v1.8.0): Advanced typography, display modes, code block controls, and visual tweaks
 - **Keyboard Shortcuts**: Global shortcuts for power users (Alt+Shift+W/C/D), popup shortcuts (1-4, R, Esc)
 - **Full Accessibility**: ARIA labels, focus management, screen reader announcements, reduced motion support
 - **Real-time Preview**: See changes instantly as you adjust the slider
@@ -46,7 +47,7 @@ A Firefox extension that allows you to customize the width of the text input/out
 cd claude-width-extension
 
 # Create the XPI file (ZIP with .xpi extension)
-zip -r build/claude-width-customizer-v1.7.0.xpi . -x "*.git*" -x "build/*" -x "*.DS_Store" -x "CLAUDE.md" -x ".claude/*" -x "docs/*"
+zip -r build/claude-width-customizer-v1.8.0.xpi . -x "*.git*" -x "build/*" -x "*.DS_Store" -x "CLAUDE.md" -x ".claude/*" -x "docs/*" -x "images/*"
 ```
 
 ## Usage
@@ -67,8 +68,9 @@ zip -r build/claude-width-customizer-v1.7.0.xpi . -x "*.git*" -x "build/*" -x "*
 | **Wide** | Sets width to 85% |
 | **Full** | Sets width to 100% |
 | **Save Current** | Save current width as a custom preset |
-| **Reset** | Returns to default 70% width |
+| **Reset** | Returns to default 85% width |
 | **Apply** | Manually saves and applies current setting |
+| **Advanced Styling** | Toggle advanced typography, display modes, and visual tweaks |
 
 ### Custom Presets
 
@@ -97,7 +99,7 @@ Right-click anywhere on claude.ai pages to access the **Claude Width** context m
 |----------|--------|
 | `Alt+Shift+W` | Open extension popup |
 | `Alt+Shift+C` | Cycle through presets (50% -> 70% -> 85% -> 100% -> 50%...) |
-| `Alt+Shift+D` | Toggle between current width and default (70%) |
+| `Alt+Shift+D` | Toggle between current width and default (85%) |
 
 **Popup Shortcuts** (when popup is open):
 
@@ -206,6 +208,18 @@ MIT License - feel free to modify and distribute.
 DoubleGate - [GitHub](https://github.com/doublegate)
 
 ## Changelog
+
+### v1.8.0 (Enhanced Styling)
+- **New**: Advanced Styling section with collapsible panels
+- **New**: Typography controls - font size (80-120%), line height, message padding
+- **New**: Display modes - Compact, Comfortable, Spacious, or Custom
+- **New**: Code block enhancements - max height, word wrap, collapse all
+- **New**: Visual tweaks - hide/show timestamps and avatars, bubble styles (rounded, square, minimal)
+- **New**: Reset All Styles button to restore all styling to defaults
+- **Changed**: Default width changed from 70% to 85%
+- **Changed**: Toolbar badge color changed from terracotta to neutral grey
+- **Technical**: Migration version 2 for enhanced styling settings
+- **Technical**: New storage keys for all enhanced styling options
 
 ### v1.7.0 (Custom Presets)
 - **New**: Create up to 4 custom presets with custom names and widths

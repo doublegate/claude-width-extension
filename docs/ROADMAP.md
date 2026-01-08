@@ -2,7 +2,7 @@
 
 **Version Range:** v1.6.0 - v2.0.0
 **Last Updated:** 2026-01-08
-**Status:** v1.7.0 Complete
+**Status:** v1.8.0 Complete
 
 ---
 
@@ -18,7 +18,7 @@ This document outlines the planned features and improvements for each minor rele
 |---------|-------|-----------|--------|
 | v1.6.0 | Keyboard & Accessibility | Keyboard shortcuts, ARIA improvements | **COMPLETE** |
 | v1.7.0 | Custom Presets | User-defined presets, preset management | **COMPLETE** |
-| v1.8.0 | Enhanced Styling | Font size, line spacing, compact mode | Planned |
+| v1.8.0 | Enhanced Styling | Font size, line spacing, compact mode | **COMPLETE** |
 | v1.9.0 | Sync & Profiles | Cross-device sync, multiple profiles | Planned |
 | v2.0.0 | Multi-Browser & Polish | Chrome/Edge support, UI overhaul | Planned |
 
@@ -159,50 +159,86 @@ This document outlines the planned features and improvements for each minor rele
 
 **Theme:** Expand beyond width to offer comprehensive chat styling options.
 
+**Status:** COMPLETE (Released 2026-01-08)
+
 ### Features
 
-- [ ] **Typography Controls**
+- [x] **Typography Controls**
   - Font size adjustment (80% - 120% of default)
   - Line height/spacing control (compact, normal, relaxed)
-  - Message padding adjustment
+  - Message padding adjustment (none, small, medium, large)
 
-- [ ] **Display Modes**
+- [x] **Display Modes**
   - Compact mode (reduced spacing, smaller UI)
   - Comfortable mode (default)
   - Spacious mode (increased spacing)
   - Custom mode (user-defined values)
 
-- [ ] **Code Block Enhancements**
-  - Adjustable code block max-height
+- [x] **Code Block Enhancements**
+  - Adjustable code block max-height (200px, 400px, 600px, none)
   - Optional code block word wrap toggle
   - Expand/collapse all code blocks button
 
-- [ ] **Visual Tweaks**
-  - Hide/show timestamps
-  - Hide/show avatars
+- [x] **Visual Tweaks**
+  - Hide/show timestamps toggle
+  - Hide/show avatars toggle
   - Message bubble style options (rounded, square, minimal)
 
 ### Technical Tasks
 
-- Extend CSS injection to handle new style properties
-- Create "Advanced" section in popup UI
-- Implement display mode presets
-- Add code block mutation observer for enhancements
-- Ensure styles don't conflict with Claude UI updates
+- [x] Extend CSS injection to handle new style properties
+- [x] Create "Advanced" section in popup UI with collapsible panels
+- [x] Implement display mode presets with coordinated typography
+- [x] Add code block mutation observer for enhancements
+- [x] Migration system for v1.7.0 users (preserves existing settings)
 
-### UI Considerations
+### Implementation Details
 
-- Use collapsible sections to keep popup manageable
-- "Basic" vs "Advanced" toggle
-- Preview changes in real-time
-- "Reset All" returns to pure defaults
+**Files Updated:**
+- `manifest.json` - Version bump to 1.8.0
+- `background/background.js` - Migration v2, grey badge color (#6B7280), enhanced styling storage keys
+- `content/content.js` - Enhanced CSS injection, typography/display/code block/visual styling functions
+- `content/content.css` - Transitions for enhanced styling properties
+- `popup/popup.html` - Advanced Styling section with collapsible panels, all new controls
+- `popup/popup.js` - Enhanced settings state, event listeners, UI synchronization
+- `popup/popup.css` - Advanced toggle, collapsible sections, toggle switches, option buttons
+- `options/options.html` - Version update, enhanced styling documentation
+
+**Key Changes:**
+- Default width changed from 70% to 85% across all files
+- Badge color changed from terracotta (#D97757) to neutral grey (#6B7280)
+- New storage keys: fontSizePercent, lineHeight, messagePadding, displayMode, codeBlockMaxHeight, codeBlockWordWrap, codeBlocksCollapsed, showTimestamps, showAvatars, messageBubbleStyle
+- Migration version incremented to 2
+- Dynamic CSS generation based on enhanced settings
+
+### Storage Schema
+
+```javascript
+{
+  // Width settings
+  chatWidthPercent: 85,
+
+  // Enhanced styling (v1.8.0)
+  fontSizePercent: 100,        // 80-120
+  lineHeight: 'normal',        // 'compact', 'normal', 'relaxed'
+  messagePadding: 'medium',    // 'none', 'small', 'medium', 'large'
+  displayMode: 'comfortable',  // 'compact', 'comfortable', 'spacious', 'custom'
+  codeBlockMaxHeight: 400,     // 200, 400, 600, 0 (none)
+  codeBlockWordWrap: false,
+  codeBlocksCollapsed: false,
+  showTimestamps: true,
+  showAvatars: true,
+  messageBubbleStyle: 'rounded'  // 'rounded', 'square', 'minimal'
+}
+```
 
 ### Testing Checklist
 
-- [ ] All typography changes render correctly
-- [ ] Display modes don't break Claude's layout
-- [ ] Code blocks remain functional
-- [ ] Performance impact is minimal
+- [x] All typography changes render correctly
+- [x] Display modes don't break Claude's layout
+- [x] Code blocks remain functional with all options
+- [x] Performance impact is minimal
+- [x] Migration from v1.7.0 preserves all existing settings
 
 ---
 

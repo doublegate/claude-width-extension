@@ -27,10 +27,11 @@
  * - Alt+Up/Down: Reorder custom presets
  *
  * @author DoubleGate
- * @version 1.7.0
+ * @version 1.8.0
  * @license MIT
  *
  * Changelog:
+ * - v1.8.0: Enhanced styling - typography, display modes, code blocks, visual tweaks, default 85%
  * - v1.7.0: Custom presets, drag-and-drop, favorites, recent widths, default 70%
  * - v1.6.0: Keyboard shortcuts, accessibility, badge
  */
@@ -49,10 +50,10 @@
     const STORAGE_KEY = 'chatWidthPercent';
 
     /**
-     * Default width percentage (changed from 60 to 70 in v1.7.0).
+     * Default width percentage (changed from 70 to 85 in v1.8.0).
      * @type {number}
      */
-    const DEFAULT_WIDTH = 70;
+    const DEFAULT_WIDTH = 85;
 
     /**
      * Minimum allowed width.
@@ -137,6 +138,63 @@
         'light': 'Light',
         'dark': 'Dark',
         'system': 'System'
+    };
+
+    // =========================================================================
+    // ENHANCED STYLING CONSTANTS (v1.8.0)
+    // =========================================================================
+
+    /**
+     * Storage keys for enhanced styling features.
+     */
+    const ENHANCED_KEYS = {
+        FONT_SIZE: 'fontSizePercent',
+        LINE_HEIGHT: 'lineHeight',
+        MESSAGE_PADDING: 'messagePadding',
+        DISPLAY_MODE: 'displayMode',
+        CODE_BLOCK_HEIGHT: 'codeBlockMaxHeight',
+        CODE_BLOCK_WRAP: 'codeBlockWordWrap',
+        CODE_BLOCKS_COLLAPSED: 'codeBlocksCollapsed',
+        SHOW_TIMESTAMPS: 'showTimestamps',
+        SHOW_AVATARS: 'showAvatars',
+        BUBBLE_STYLE: 'messageBubbleStyle'
+    };
+
+    /**
+     * Default values for enhanced styling.
+     */
+    const ENHANCED_DEFAULTS = {
+        [ENHANCED_KEYS.FONT_SIZE]: 100,
+        [ENHANCED_KEYS.LINE_HEIGHT]: 'normal',
+        [ENHANCED_KEYS.MESSAGE_PADDING]: 'medium',
+        [ENHANCED_KEYS.DISPLAY_MODE]: 'comfortable',
+        [ENHANCED_KEYS.CODE_BLOCK_HEIGHT]: 400,
+        [ENHANCED_KEYS.CODE_BLOCK_WRAP]: false,
+        [ENHANCED_KEYS.CODE_BLOCKS_COLLAPSED]: false,
+        [ENHANCED_KEYS.SHOW_TIMESTAMPS]: true,
+        [ENHANCED_KEYS.SHOW_AVATARS]: true,
+        [ENHANCED_KEYS.BUBBLE_STYLE]: 'rounded'
+    };
+
+    /**
+     * Display mode presets.
+     */
+    const DISPLAY_MODE_PRESETS = {
+        'compact': {
+            lineHeight: 'compact',
+            messagePadding: 'small',
+            fontSize: 95
+        },
+        'comfortable': {
+            lineHeight: 'normal',
+            messagePadding: 'medium',
+            fontSize: 100
+        },
+        'spacious': {
+            lineHeight: 'relaxed',
+            messagePadding: 'large',
+            fontSize: 105
+        }
     };
 
     // =========================================================================
@@ -317,6 +375,18 @@
      */
     let dragTarget = null;
 
+    /**
+     * Enhanced styling settings (v1.8.0).
+     * @type {Object}
+     */
+    let enhancedSettings = { ...ENHANCED_DEFAULTS };
+
+    /**
+     * Whether advanced section is expanded.
+     * @type {boolean}
+     */
+    let advancedExpanded = false;
+
     // =========================================================================
     // INITIALIZATION
     // =========================================================================
@@ -365,7 +435,11 @@
         loadSavedPreference();
         loadCustomPresets();
         loadRecentWidths();
+        loadEnhancedSettings();
         checkClaudeTabStatus();
+
+        // Set up enhanced styling event listeners (v1.8.0)
+        setupEnhancedStyleListeners();
 
         // Set initial focus to slider after a brief delay
         setTimeout(() => {
@@ -1665,6 +1739,377 @@
             }
         } catch (error) {
             console.error('[Claude Width Popup] Error notifying tabs:', error);
+        }
+    }
+
+    // =========================================================================
+    // ENHANCED STYLING (v1.8.0)
+    // =========================================================================
+
+    /**
+     * Set up event listeners for enhanced styling controls.
+     */
+    function setupEnhancedStyleListeners() {
+        // Advanced toggle button
+        const advancedToggle = document.getElementById('advancedToggle');
+        const advancedContent = document.getElementById('advancedContent');
+
+        if (advancedToggle && advancedContent) {
+            advancedToggle.addEventListener('click', () => {
+                advancedExpanded = !advancedExpanded;
+                advancedContent.hidden = !advancedExpanded;
+                advancedToggle.setAttribute('aria-expanded', String(advancedExpanded));
+                advancedToggle.classList.toggle('expanded', advancedExpanded);
+
+                // Update focusable elements
+                cacheFocusableElements();
+            });
+        }
+
+        // Font size slider
+        const fontSizeSlider = document.getElementById('fontSizeSlider');
+        const fontSizeValue = document.getElementById('fontSizeValue');
+        if (fontSizeSlider) {
+            fontSizeSlider.addEventListener('input', (e) => {
+                const value = parseInt(e.target.value, 10);
+                if (fontSizeValue) {
+                    fontSizeValue.textContent = `${value}%`;
+                }
+            });
+            fontSizeSlider.addEventListener('change', (e) => {
+                const value = parseInt(e.target.value, 10);
+                saveEnhancedSetting(ENHANCED_KEYS.FONT_SIZE, value);
+                // Switch to custom mode when manually adjusting
+                saveEnhancedSetting(ENHANCED_KEYS.DISPLAY_MODE, 'custom');
+                updateDisplayModeButtons('custom');
+                announceChange(`Font size set to ${value}%`);
+            });
+        }
+
+        // Option buttons (line height, message padding, code block height, bubble style)
+        document.querySelectorAll('.option-btn[data-setting]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const setting = btn.dataset.setting;
+                let value = btn.dataset.value;
+
+                // Convert numeric values
+                if (setting === ENHANCED_KEYS.CODE_BLOCK_HEIGHT) {
+                    value = parseInt(value, 10);
+                }
+
+                // Update active state
+                const group = btn.closest('.control-buttons');
+                if (group) {
+                    group.querySelectorAll('.option-btn').forEach(b => {
+                        b.classList.remove('active');
+                        b.setAttribute('aria-checked', 'false');
+                    });
+                    btn.classList.add('active');
+                    btn.setAttribute('aria-checked', 'true');
+                }
+
+                saveEnhancedSetting(setting, value);
+
+                // Switch to custom mode when manually adjusting typography
+                if (setting === ENHANCED_KEYS.LINE_HEIGHT || setting === ENHANCED_KEYS.MESSAGE_PADDING) {
+                    saveEnhancedSetting(ENHANCED_KEYS.DISPLAY_MODE, 'custom');
+                    updateDisplayModeButtons('custom');
+                }
+
+                announceChange(`${getSettingName(setting)} set to ${btn.textContent}`);
+            });
+        });
+
+        // Display mode buttons
+        document.querySelectorAll('.mode-btn[data-mode]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const mode = btn.dataset.mode;
+
+                // Update active state
+                document.querySelectorAll('.mode-btn').forEach(b => {
+                    b.classList.remove('active');
+                    b.setAttribute('aria-checked', 'false');
+                });
+                btn.classList.add('active');
+                btn.setAttribute('aria-checked', 'true');
+
+                // Apply mode preset (except custom)
+                if (mode !== 'custom' && DISPLAY_MODE_PRESETS[mode]) {
+                    const preset = DISPLAY_MODE_PRESETS[mode];
+                    saveEnhancedSetting(ENHANCED_KEYS.LINE_HEIGHT, preset.lineHeight);
+                    saveEnhancedSetting(ENHANCED_KEYS.MESSAGE_PADDING, preset.messagePadding);
+                    saveEnhancedSetting(ENHANCED_KEYS.FONT_SIZE, preset.fontSize);
+
+                    // Update UI to reflect preset values
+                    updateTypographyUI(preset);
+                }
+
+                saveEnhancedSetting(ENHANCED_KEYS.DISPLAY_MODE, mode);
+                announceChange(`Display mode set to ${mode}`);
+            });
+        });
+
+        // Toggle switches
+        const codeWrapToggle = document.getElementById('codeWrapToggle');
+        if (codeWrapToggle) {
+            codeWrapToggle.addEventListener('change', (e) => {
+                saveEnhancedSetting(ENHANCED_KEYS.CODE_BLOCK_WRAP, e.target.checked);
+                announceChange(`Code block word wrap ${e.target.checked ? 'enabled' : 'disabled'}`);
+            });
+        }
+
+        const showTimestampsToggle = document.getElementById('showTimestampsToggle');
+        if (showTimestampsToggle) {
+            showTimestampsToggle.addEventListener('change', (e) => {
+                saveEnhancedSetting(ENHANCED_KEYS.SHOW_TIMESTAMPS, e.target.checked);
+                announceChange(`Timestamps ${e.target.checked ? 'shown' : 'hidden'}`);
+            });
+        }
+
+        const showAvatarsToggle = document.getElementById('showAvatarsToggle');
+        if (showAvatarsToggle) {
+            showAvatarsToggle.addEventListener('change', (e) => {
+                saveEnhancedSetting(ENHANCED_KEYS.SHOW_AVATARS, e.target.checked);
+                announceChange(`Avatars ${e.target.checked ? 'shown' : 'hidden'}`);
+            });
+        }
+
+        // Toggle code blocks button
+        const toggleCodeBlocksBtn = document.getElementById('toggleCodeBlocksBtn');
+        if (toggleCodeBlocksBtn) {
+            toggleCodeBlocksBtn.addEventListener('click', async () => {
+                const currentState = enhancedSettings[ENHANCED_KEYS.CODE_BLOCKS_COLLAPSED];
+                const newState = !currentState;
+                saveEnhancedSetting(ENHANCED_KEYS.CODE_BLOCKS_COLLAPSED, newState);
+                updateCodeBlocksButtonText(newState);
+                announceChange(`Code blocks ${newState ? 'collapsed' : 'expanded'}`);
+
+                // Notify content script to toggle
+                try {
+                    const tabs = await browser.tabs.query({ url: '*://claude.ai/*' });
+                    for (const tab of tabs) {
+                        try {
+                            await browser.tabs.sendMessage(tab.id, {
+                                action: 'toggleCodeBlocks',
+                                collapse: newState
+                            });
+                        } catch (e) {
+                            // Tab might not have content script
+                        }
+                    }
+                } catch (e) {
+                    console.error('[Claude Width Popup] Error toggling code blocks:', e);
+                }
+            });
+        }
+
+        // Reset all styles button
+        const resetAllStylesBtn = document.getElementById('resetAllStylesBtn');
+        if (resetAllStylesBtn) {
+            resetAllStylesBtn.addEventListener('click', async () => {
+                await resetAllEnhancedStyles();
+                announceChange('All styles reset to defaults');
+            });
+        }
+    }
+
+    /**
+     * Load enhanced styling settings from storage.
+     */
+    async function loadEnhancedSettings() {
+        try {
+            const keys = Object.values(ENHANCED_KEYS);
+            const result = await browser.storage.local.get(keys);
+
+            // Merge with defaults
+            for (const key of keys) {
+                if (result[key] !== undefined) {
+                    enhancedSettings[key] = result[key];
+                }
+            }
+
+            // Update UI to reflect loaded settings
+            updateEnhancedStyleUI();
+            console.log('[Claude Width Popup] Enhanced settings loaded:', enhancedSettings);
+        } catch (error) {
+            console.error('[Claude Width Popup] Error loading enhanced settings:', error);
+        }
+    }
+
+    /**
+     * Save an enhanced styling setting.
+     *
+     * @param {string} key - The setting key
+     * @param {*} value - The value to save
+     */
+    async function saveEnhancedSetting(key, value) {
+        try {
+            enhancedSettings[key] = value;
+            await browser.storage.local.set({ [key]: value });
+            console.log(`[Claude Width Popup] Saved ${key}: ${value}`);
+        } catch (error) {
+            console.error(`[Claude Width Popup] Error saving ${key}:`, error);
+        }
+    }
+
+    /**
+     * Update the enhanced styling UI to reflect current settings.
+     */
+    function updateEnhancedStyleUI() {
+        // Font size slider
+        const fontSizeSlider = document.getElementById('fontSizeSlider');
+        const fontSizeValue = document.getElementById('fontSizeValue');
+        if (fontSizeSlider) {
+            fontSizeSlider.value = enhancedSettings[ENHANCED_KEYS.FONT_SIZE];
+        }
+        if (fontSizeValue) {
+            fontSizeValue.textContent = `${enhancedSettings[ENHANCED_KEYS.FONT_SIZE]}%`;
+        }
+
+        // Line height buttons
+        updateOptionButtons('lineHeight', enhancedSettings[ENHANCED_KEYS.LINE_HEIGHT]);
+
+        // Message padding buttons
+        updateOptionButtons('messagePadding', enhancedSettings[ENHANCED_KEYS.MESSAGE_PADDING]);
+
+        // Display mode buttons
+        updateDisplayModeButtons(enhancedSettings[ENHANCED_KEYS.DISPLAY_MODE]);
+
+        // Code block height buttons
+        updateOptionButtons('codeBlockMaxHeight', String(enhancedSettings[ENHANCED_KEYS.CODE_BLOCK_HEIGHT]));
+
+        // Code wrap toggle
+        const codeWrapToggle = document.getElementById('codeWrapToggle');
+        if (codeWrapToggle) {
+            codeWrapToggle.checked = enhancedSettings[ENHANCED_KEYS.CODE_BLOCK_WRAP];
+        }
+
+        // Show timestamps toggle
+        const showTimestampsToggle = document.getElementById('showTimestampsToggle');
+        if (showTimestampsToggle) {
+            showTimestampsToggle.checked = enhancedSettings[ENHANCED_KEYS.SHOW_TIMESTAMPS];
+        }
+
+        // Show avatars toggle
+        const showAvatarsToggle = document.getElementById('showAvatarsToggle');
+        if (showAvatarsToggle) {
+            showAvatarsToggle.checked = enhancedSettings[ENHANCED_KEYS.SHOW_AVATARS];
+        }
+
+        // Bubble style buttons
+        updateOptionButtons('messageBubbleStyle', enhancedSettings[ENHANCED_KEYS.BUBBLE_STYLE]);
+
+        // Code blocks collapsed button text
+        updateCodeBlocksButtonText(enhancedSettings[ENHANCED_KEYS.CODE_BLOCKS_COLLAPSED]);
+    }
+
+    /**
+     * Update option button active states.
+     *
+     * @param {string} setting - The setting name
+     * @param {string} value - The active value
+     */
+    function updateOptionButtons(setting, value) {
+        document.querySelectorAll(`.option-btn[data-setting="${setting}"]`).forEach(btn => {
+            const isActive = btn.dataset.value === value;
+            btn.classList.toggle('active', isActive);
+            btn.setAttribute('aria-checked', String(isActive));
+        });
+    }
+
+    /**
+     * Update display mode button active states.
+     *
+     * @param {string} mode - The active mode
+     */
+    function updateDisplayModeButtons(mode) {
+        document.querySelectorAll('.mode-btn[data-mode]').forEach(btn => {
+            const isActive = btn.dataset.mode === mode;
+            btn.classList.toggle('active', isActive);
+            btn.setAttribute('aria-checked', String(isActive));
+        });
+    }
+
+    /**
+     * Update typography UI to reflect a preset.
+     *
+     * @param {Object} preset - The preset values
+     */
+    function updateTypographyUI(preset) {
+        // Font size
+        const fontSizeSlider = document.getElementById('fontSizeSlider');
+        const fontSizeValue = document.getElementById('fontSizeValue');
+        if (fontSizeSlider) {
+            fontSizeSlider.value = preset.fontSize;
+        }
+        if (fontSizeValue) {
+            fontSizeValue.textContent = `${preset.fontSize}%`;
+        }
+
+        // Line height
+        updateOptionButtons('lineHeight', preset.lineHeight);
+
+        // Message padding
+        updateOptionButtons('messagePadding', preset.messagePadding);
+    }
+
+    /**
+     * Update code blocks button text based on collapsed state.
+     *
+     * @param {boolean} collapsed - Whether code blocks are collapsed
+     */
+    function updateCodeBlocksButtonText(collapsed) {
+        const textElement = document.getElementById('toggleCodeBlocksText');
+        if (textElement) {
+            textElement.textContent = collapsed ? 'Expand All' : 'Collapse All';
+        }
+    }
+
+    /**
+     * Get human-readable setting name.
+     *
+     * @param {string} setting - The setting key
+     * @returns {string} Human-readable name
+     */
+    function getSettingName(setting) {
+        const names = {
+            [ENHANCED_KEYS.LINE_HEIGHT]: 'Line height',
+            [ENHANCED_KEYS.MESSAGE_PADDING]: 'Message padding',
+            [ENHANCED_KEYS.CODE_BLOCK_HEIGHT]: 'Code block max height',
+            [ENHANCED_KEYS.BUBBLE_STYLE]: 'Bubble style'
+        };
+        return names[setting] || setting;
+    }
+
+    /**
+     * Reset all enhanced styling to defaults.
+     */
+    async function resetAllEnhancedStyles() {
+        try {
+            // Save all defaults to storage
+            await browser.storage.local.set(ENHANCED_DEFAULTS);
+            enhancedSettings = { ...ENHANCED_DEFAULTS };
+
+            // Update UI
+            updateEnhancedStyleUI();
+
+            // Notify content scripts
+            try {
+                const tabs = await browser.tabs.query({ url: '*://claude.ai/*' });
+                for (const tab of tabs) {
+                    try {
+                        await browser.tabs.sendMessage(tab.id, { action: 'resetEnhancedStyles' });
+                    } catch (e) {
+                        // Tab might not have content script
+                    }
+                }
+            } catch (e) {
+                console.error('[Claude Width Popup] Error notifying tabs:', e);
+            }
+
+            console.log('[Claude Width Popup] All enhanced styles reset to defaults');
+        } catch (error) {
+            console.error('[Claude Width Popup] Error resetting enhanced styles:', error);
         }
     }
 

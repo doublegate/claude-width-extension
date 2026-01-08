@@ -2,19 +2,22 @@
  * Claude Chat Width Customizer - Content Script
  * ==============================================
  *
- * VERSION 1.7.0 - Custom Presets
+ * VERSION 1.8.0 - Enhanced Styling
  *
  * Injected into claude.ai pages to apply width customizations to the chat area.
  * Works with the background script to handle keyboard shortcuts for preset
  * cycling and default toggling.
  *
- * Changes from 1.6.0:
- * - Updated version to 1.7.0
- * - Changed default width from 60% to 70%
- * - Added support for custom presets and context menu
+ * Changes from 1.7.0:
+ * - Updated version to 1.8.0
+ * - Changed default width from 70% to 85%
+ * - Added typography controls (font size, line height, message padding)
+ * - Added display modes (compact, comfortable, spacious, custom)
+ * - Added code block enhancements (max-height, word wrap, collapse all)
+ * - Added visual tweaks (timestamps, avatars, bubble style)
  *
  * @author DoubleGate
- * @version 1.7.0
+ * @version 1.8.0
  * @license MIT
  */
 
@@ -25,10 +28,11 @@
     // CONSTANTS
     // =========================================================================
 
-    const DEFAULT_WIDTH_PERCENT = 70;
+    const DEFAULT_WIDTH_PERCENT = 85;
     const MIN_WIDTH_PERCENT = 40;
     const MAX_WIDTH_PERCENT = 100;
     const STYLE_ELEMENT_ID = 'claude-width-customizer-styles';
+    const ENHANCED_STYLE_ID = 'claude-enhanced-styles';
     const STORAGE_KEY = 'chatWidthPercent';
     const DATA_ATTR = 'data-claude-width-applied';
 
@@ -37,6 +41,83 @@
      * @type {number[]}
      */
     const PRESET_CYCLE = [50, 70, 85, 100];
+
+    // =========================================================================
+    // ENHANCED STYLING CONSTANTS (v1.8.0)
+    // =========================================================================
+
+    /**
+     * Storage keys for enhanced styling features.
+     */
+    const ENHANCED_KEYS = {
+        FONT_SIZE: 'fontSizePercent',
+        LINE_HEIGHT: 'lineHeight',
+        MESSAGE_PADDING: 'messagePadding',
+        DISPLAY_MODE: 'displayMode',
+        CODE_BLOCK_HEIGHT: 'codeBlockMaxHeight',
+        CODE_BLOCK_WRAP: 'codeBlockWordWrap',
+        CODE_BLOCKS_COLLAPSED: 'codeBlocksCollapsed',
+        SHOW_TIMESTAMPS: 'showTimestamps',
+        SHOW_AVATARS: 'showAvatars',
+        BUBBLE_STYLE: 'messageBubbleStyle'
+    };
+
+    /**
+     * Default values for enhanced styling.
+     */
+    const ENHANCED_DEFAULTS = {
+        [ENHANCED_KEYS.FONT_SIZE]: 100,
+        [ENHANCED_KEYS.LINE_HEIGHT]: 'normal',
+        [ENHANCED_KEYS.MESSAGE_PADDING]: 'medium',
+        [ENHANCED_KEYS.DISPLAY_MODE]: 'comfortable',
+        [ENHANCED_KEYS.CODE_BLOCK_HEIGHT]: 400,
+        [ENHANCED_KEYS.CODE_BLOCK_WRAP]: false,
+        [ENHANCED_KEYS.CODE_BLOCKS_COLLAPSED]: false,
+        [ENHANCED_KEYS.SHOW_TIMESTAMPS]: true,
+        [ENHANCED_KEYS.SHOW_AVATARS]: true,
+        [ENHANCED_KEYS.BUBBLE_STYLE]: 'rounded'
+    };
+
+    /**
+     * Line height values mapping.
+     */
+    const LINE_HEIGHT_VALUES = {
+        'compact': 1.2,
+        'normal': 1.5,
+        'relaxed': 1.8
+    };
+
+    /**
+     * Message padding values in pixels.
+     */
+    const MESSAGE_PADDING_VALUES = {
+        'none': 0,
+        'small': 8,
+        'medium': 16,
+        'large': 24
+    };
+
+    /**
+     * Display mode presets.
+     */
+    const DISPLAY_MODE_PRESETS = {
+        'compact': {
+            lineHeight: 'compact',
+            messagePadding: 'small',
+            fontSize: 95
+        },
+        'comfortable': {
+            lineHeight: 'normal',
+            messagePadding: 'medium',
+            fontSize: 100
+        },
+        'spacious': {
+            lineHeight: 'relaxed',
+            messagePadding: 'large',
+            fontSize: 105
+        }
+        // 'custom' uses user-defined values
+    };
 
     // Selectors that indicate an element is part of the sidebar
     const SIDEBAR_INDICATORS = [
@@ -75,6 +156,9 @@
     let domObserver = null;
     let applyDebounceTimer = null;
     let styledElements = new Set();
+
+    // Enhanced styling state (v1.8.0)
+    let enhancedSettings = { ...ENHANCED_DEFAULTS };
 
     // =========================================================================
     // HELPER FUNCTIONS
@@ -120,6 +204,305 @@
             }
         });
         styledElements.clear();
+    }
+
+    // =========================================================================
+    // ENHANCED STYLING FUNCTIONS (v1.8.0)
+    // =========================================================================
+
+    /**
+     * Generate CSS for enhanced styling features.
+     * @returns {string} CSS string
+     */
+    function generateEnhancedCSS() {
+        const settings = enhancedSettings;
+        const fontSize = settings[ENHANCED_KEYS.FONT_SIZE];
+        const lineHeight = LINE_HEIGHT_VALUES[settings[ENHANCED_KEYS.LINE_HEIGHT]] || 1.5;
+        const messagePadding = MESSAGE_PADDING_VALUES[settings[ENHANCED_KEYS.MESSAGE_PADDING]] || 16;
+        const codeBlockHeight = settings[ENHANCED_KEYS.CODE_BLOCK_HEIGHT];
+        const codeBlockWrap = settings[ENHANCED_KEYS.CODE_BLOCK_WRAP];
+        const showTimestamps = settings[ENHANCED_KEYS.SHOW_TIMESTAMPS];
+        const showAvatars = settings[ENHANCED_KEYS.SHOW_AVATARS];
+        const bubbleStyle = settings[ENHANCED_KEYS.BUBBLE_STYLE];
+
+        let css = `
+            /* Claude Width Customizer - Enhanced Styling v1.8.0 */
+
+            /* Typography Controls */
+            [class*="Message"] p,
+            [class*="message"] p,
+            .prose p,
+            [class*="prose"] p {
+                font-size: ${fontSize}% !important;
+                line-height: ${lineHeight} !important;
+            }
+
+            /* Message Padding */
+            [class*="Message"],
+            [class*="message"] {
+                padding: ${messagePadding}px !important;
+            }
+        `;
+
+        // Code Block Max Height
+        if (codeBlockHeight > 0) {
+            css += `
+                pre, [class*="CodeBlock"], [class*="code-block"] {
+                    max-height: ${codeBlockHeight}px !important;
+                    overflow-y: auto !important;
+                }
+            `;
+        } else {
+            css += `
+                pre, [class*="CodeBlock"], [class*="code-block"] {
+                    max-height: none !important;
+                }
+            `;
+        }
+
+        // Code Block Word Wrap
+        if (codeBlockWrap) {
+            css += `
+                pre, pre code, [class*="CodeBlock"] code {
+                    white-space: pre-wrap !important;
+                    word-wrap: break-word !important;
+                    overflow-wrap: break-word !important;
+                }
+            `;
+        }
+
+        // Hide Timestamps
+        if (!showTimestamps) {
+            css += `
+                [class*="timestamp" i],
+                [class*="time" i]:not([class*="runtime"]):not([class*="realtime"]),
+                time,
+                [datetime] {
+                    display: none !important;
+                }
+            `;
+        }
+
+        // Hide Avatars
+        if (!showAvatars) {
+            css += `
+                [class*="avatar" i],
+                [class*="Avatar" i],
+                [class*="profile-pic" i],
+                [class*="user-icon" i] {
+                    display: none !important;
+                }
+            `;
+        }
+
+        // Message Bubble Styles
+        if (bubbleStyle === 'square') {
+            css += `
+                [class*="Message"],
+                [class*="message"] {
+                    border-radius: 0 !important;
+                }
+            `;
+        } else if (bubbleStyle === 'minimal') {
+            css += `
+                [class*="Message"],
+                [class*="message"] {
+                    border-radius: 0 !important;
+                    background: transparent !important;
+                    border: none !important;
+                    box-shadow: none !important;
+                }
+            `;
+        }
+        // 'rounded' is the default, no extra CSS needed
+
+        // Reduced motion support
+        css += `
+            @media (prefers-reduced-motion: reduce) {
+                [class*="Message"],
+                [class*="message"],
+                pre, [class*="CodeBlock"] {
+                    transition: none !important;
+                }
+            }
+        `;
+
+        return css;
+    }
+
+    /**
+     * Inject or update enhanced styling CSS.
+     */
+    function injectEnhancedCSS() {
+        let styleElement = document.getElementById(ENHANCED_STYLE_ID);
+        const css = generateEnhancedCSS();
+
+        if (styleElement) {
+            styleElement.textContent = css;
+        } else {
+            styleElement = document.createElement('style');
+            styleElement.id = ENHANCED_STYLE_ID;
+            styleElement.type = 'text/css';
+            styleElement.textContent = css;
+
+            const head = document.head || document.getElementsByTagName('head')[0];
+            if (head) {
+                head.appendChild(styleElement);
+            }
+        }
+
+        console.log('[Claude Width] Enhanced CSS injected/updated');
+    }
+
+    /**
+     * Load enhanced styling settings from storage.
+     */
+    async function loadEnhancedSettings() {
+        try {
+            const keys = Object.values(ENHANCED_KEYS);
+            const result = await browser.storage.local.get(keys);
+
+            // Merge with defaults
+            for (const key of keys) {
+                if (result[key] !== undefined) {
+                    enhancedSettings[key] = result[key];
+                }
+            }
+
+            console.log('[Claude Width] Enhanced settings loaded:', enhancedSettings);
+        } catch (error) {
+            console.error('[Claude Width] Error loading enhanced settings:', error);
+        }
+    }
+
+    /**
+     * Handle enhanced settings changes.
+     * @param {Object} changes - Storage changes
+     */
+    function handleEnhancedSettingsChange(changes) {
+        let needsUpdate = false;
+
+        for (const key of Object.values(ENHANCED_KEYS)) {
+            if (changes[key]) {
+                enhancedSettings[key] = changes[key].newValue;
+                needsUpdate = true;
+            }
+        }
+
+        if (needsUpdate) {
+            // Apply display mode preset if changed
+            if (changes[ENHANCED_KEYS.DISPLAY_MODE]) {
+                const mode = changes[ENHANCED_KEYS.DISPLAY_MODE].newValue;
+                if (mode !== 'custom' && DISPLAY_MODE_PRESETS[mode]) {
+                    const preset = DISPLAY_MODE_PRESETS[mode];
+                    enhancedSettings[ENHANCED_KEYS.LINE_HEIGHT] = preset.lineHeight;
+                    enhancedSettings[ENHANCED_KEYS.MESSAGE_PADDING] = preset.messagePadding;
+                    enhancedSettings[ENHANCED_KEYS.FONT_SIZE] = preset.fontSize;
+                }
+            }
+
+            // Handle code blocks collapsed state
+            if (changes[ENHANCED_KEYS.CODE_BLOCKS_COLLAPSED]) {
+                const collapsed = changes[ENHANCED_KEYS.CODE_BLOCKS_COLLAPSED].newValue;
+                toggleAllCodeBlocks(collapsed);
+            }
+
+            injectEnhancedCSS();
+            console.log('[Claude Width] Enhanced settings updated');
+        }
+    }
+
+    /**
+     * Toggle collapse state of all code blocks.
+     * @param {boolean} collapse - Whether to collapse
+     */
+    function toggleAllCodeBlocks(collapse) {
+        const codeBlocks = document.querySelectorAll('pre, [class*="CodeBlock"], [class*="code-block"]');
+
+        codeBlocks.forEach(block => {
+            if (isInsideSidebar(block)) return;
+
+            if (collapse) {
+                block.style.maxHeight = '100px';
+                block.style.overflow = 'hidden';
+                block.setAttribute('data-claude-collapsed', 'true');
+
+                // Add expand button if not exists
+                if (!block.querySelector('.claude-expand-btn')) {
+                    addExpandButton(block);
+                }
+            } else {
+                block.style.maxHeight = '';
+                block.style.overflow = '';
+                block.removeAttribute('data-claude-collapsed');
+
+                // Remove expand button
+                const btn = block.querySelector('.claude-expand-btn');
+                if (btn) btn.remove();
+            }
+        });
+    }
+
+    /**
+     * Add expand/collapse button to a code block.
+     * @param {Element} block - The code block element
+     */
+    function addExpandButton(block) {
+        const btn = document.createElement('button');
+        btn.className = 'claude-expand-btn';
+        btn.textContent = 'Expand';
+        btn.style.cssText = `
+            position: absolute;
+            bottom: 4px;
+            right: 4px;
+            padding: 4px 8px;
+            background: rgba(0, 0, 0, 0.6);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+            z-index: 10;
+        `;
+
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const isCollapsed = block.getAttribute('data-claude-collapsed') === 'true';
+
+            if (isCollapsed) {
+                block.style.maxHeight = '';
+                block.style.overflow = '';
+                block.removeAttribute('data-claude-collapsed');
+                btn.textContent = 'Collapse';
+            } else {
+                block.style.maxHeight = '100px';
+                block.style.overflow = 'hidden';
+                block.setAttribute('data-claude-collapsed', 'true');
+                btn.textContent = 'Expand';
+            }
+        });
+
+        // Ensure code block is positioned for absolute child
+        if (getComputedStyle(block).position === 'static') {
+            block.style.position = 'relative';
+        }
+
+        block.appendChild(btn);
+    }
+
+    /**
+     * Reset all enhanced styling to defaults.
+     */
+    async function resetEnhancedStyles() {
+        try {
+            await browser.storage.local.set(ENHANCED_DEFAULTS);
+            enhancedSettings = { ...ENHANCED_DEFAULTS };
+            injectEnhancedCSS();
+            toggleAllCodeBlocks(false);
+            console.log('[Claude Width] Enhanced styles reset to defaults');
+        } catch (error) {
+            console.error('[Claude Width] Error resetting enhanced styles:', error);
+        }
     }
 
     /**
@@ -336,7 +719,7 @@
 
         const css = `
             /*
-             * Claude Chat Width Customizer - Minimal CSS v1.7.0
+             * Claude Chat Width Customizer - Minimal CSS v1.8.0
              */
 
             /* Smooth transitions for styled elements */
@@ -411,6 +794,7 @@
     function handleStorageChange(changes, areaName) {
         if (areaName !== 'local') return;
 
+        // Handle width changes
         if (changes[STORAGE_KEY]) {
             const newWidth = changes[STORAGE_KEY].newValue;
 
@@ -421,6 +805,9 @@
                 applyWidthToChat(newWidth);
             }
         }
+
+        // Handle enhanced styling changes (v1.8.0)
+        handleEnhancedSettingsChange(changes);
     }
 
     // =========================================================================
@@ -503,7 +890,8 @@
                 sendResponse({
                     success: true,
                     currentWidth: currentWidth,
-                    styledElementCount: styledElements.size
+                    styledElementCount: styledElements.size,
+                    enhancedSettings: enhancedSettings
                 });
                 break;
 
@@ -524,6 +912,31 @@
                 });
                 return true; // Async response
 
+            // Enhanced styling actions (v1.8.0)
+            case 'resetEnhancedStyles':
+                resetEnhancedStyles().then(() => {
+                    sendResponse({ success: true });
+                });
+                return true; // Async response
+
+            case 'toggleCodeBlocks':
+                const collapse = message.collapse !== undefined ? message.collapse : !enhancedSettings[ENHANCED_KEYS.CODE_BLOCKS_COLLAPSED];
+                toggleAllCodeBlocks(collapse);
+                sendResponse({ success: true, collapsed: collapse });
+                break;
+
+            case 'getEnhancedSettings':
+                sendResponse({
+                    success: true,
+                    settings: enhancedSettings
+                });
+                break;
+
+            case 'refreshEnhancedStyles':
+                injectEnhancedCSS();
+                sendResponse({ success: true });
+                break;
+
             default:
                 sendResponse({ success: false, error: 'Unknown action' });
         }
@@ -536,15 +949,21 @@
     // =========================================================================
 
     async function initialize() {
-        console.log('[Claude Width] Initializing content script v1.7.0...');
+        console.log('[Claude Width] Initializing content script v1.8.0...');
 
         try {
-            // Load saved preference
+            // Load saved width preference
             const savedWidth = await loadWidthPreference();
             currentWidth = savedWidth;
 
-            // Inject minimal CSS
+            // Load enhanced styling settings (v1.8.0)
+            await loadEnhancedSettings();
+
+            // Inject minimal CSS for width
             injectMinimalCSS();
+
+            // Inject enhanced styling CSS (v1.8.0)
+            injectEnhancedCSS();
 
             // Apply initial styles with delays to catch lazy-loaded content
             setTimeout(() => applyWidthToChat(savedWidth), 100);
@@ -552,6 +971,11 @@
             setTimeout(() => applyWidthToChat(currentWidth), 1000);
             setTimeout(() => applyWidthToChat(currentWidth), 2000);
             setTimeout(() => applyWidthToChat(currentWidth), 3000);
+
+            // Apply collapsed code blocks if enabled
+            if (enhancedSettings[ENHANCED_KEYS.CODE_BLOCKS_COLLAPSED]) {
+                setTimeout(() => toggleAllCodeBlocks(true), 1500);
+            }
 
             // Set up listeners
             browser.storage.onChanged.addListener(handleStorageChange);

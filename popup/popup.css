@@ -24,9 +24,10 @@
  * - Visible focus indicators for keyboard navigation
  *
  * @author DoubleGate
- * @version 1.7.0
+ * @version 1.8.0
  *
  * Changelog:
+ * - v1.8.0: Enhanced styling - advanced sections, collapsibles, reset all styles
  * - v1.7.0: Custom presets, drag-drop, favorites, recently used, edit modal
  * - v1.6.0: Accessibility improvements, themes
  */
@@ -1210,6 +1211,422 @@ body {
     color: white;
 }
 
+/* ===== Advanced Styling Section (v1.8.0) ===== */
+.advanced-section {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+    padding-top: var(--space-sm);
+    border-top: 1px solid var(--color-border);
+}
+
+/* Advanced Toggle Button */
+.advanced-toggle {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    padding: var(--space-sm);
+    background: transparent;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    font-family: inherit;
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+    color: var(--color-text-secondary);
+    transition: all var(--transition-fast);
+    width: 100%;
+    text-align: left;
+}
+
+.advanced-toggle:hover {
+    background-color: var(--color-bg-hover);
+    border-color: var(--color-border-strong);
+    color: var(--color-text);
+}
+
+.advanced-toggle:focus {
+    outline: none;
+}
+
+.advanced-toggle:focus-visible {
+    box-shadow: var(--focus-ring);
+}
+
+.toggle-icon {
+    width: 16px;
+    height: 16px;
+    color: var(--color-text-muted);
+    transition: transform var(--transition-fast);
+    flex-shrink: 0;
+}
+
+.advanced-toggle[aria-expanded="true"] .toggle-icon {
+    transform: rotate(90deg);
+}
+
+.advanced-badge {
+    margin-left: auto;
+    font-size: var(--font-size-xs);
+    font-weight: 600;
+    color: var(--color-primary);
+    background-color: var(--color-primary-light);
+    padding: 2px 6px;
+    border-radius: var(--radius-sm);
+}
+
+/* Advanced Content */
+.advanced-content {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+    padding: var(--space-sm);
+    background-color: var(--color-bg-elevated);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+}
+
+.advanced-content[hidden] {
+    display: none;
+}
+
+/* Style Sections (collapsible details) */
+.style-section {
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+}
+
+.style-section[open] {
+    background-color: var(--color-bg);
+}
+
+.section-header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    padding: var(--space-sm) var(--space-md);
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    list-style: none;
+}
+
+.section-header::-webkit-details-marker {
+    display: none;
+}
+
+.section-header:hover {
+    background-color: var(--color-bg-hover);
+    color: var(--color-text);
+}
+
+.section-header:focus {
+    outline: none;
+}
+
+.section-header:focus-visible {
+    box-shadow: inset var(--focus-ring);
+}
+
+.section-icon {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+}
+
+.section-content {
+    padding: var(--space-sm) var(--space-md) var(--space-md);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+}
+
+/* Control Rows */
+.control-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-sm);
+}
+
+.control-label {
+    font-size: var(--font-size-xs);
+    color: var(--color-text-secondary);
+    white-space: nowrap;
+}
+
+.control-input {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+}
+
+.control-value {
+    font-size: var(--font-size-xs);
+    color: var(--color-text-muted);
+    min-width: 35px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Small Slider */
+.small-slider {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 80px;
+    height: 4px;
+    border-radius: var(--radius-full);
+    background: linear-gradient(
+        to right,
+        var(--color-primary) 0%,
+        var(--color-primary) var(--slider-progress, 50%),
+        var(--color-border-strong) var(--slider-progress, 50%),
+        var(--color-border-strong) 100%
+    );
+    cursor: pointer;
+    transition: background var(--transition-fast);
+}
+
+.small-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 12px;
+    height: 12px;
+    border-radius: var(--radius-full);
+    background: var(--color-bg-elevated);
+    border: 2px solid var(--color-primary);
+    cursor: grab;
+    transition: transform var(--transition-fast);
+}
+
+.small-slider::-webkit-slider-thumb:hover {
+    transform: scale(1.1);
+}
+
+.small-slider::-moz-range-thumb {
+    width: 12px;
+    height: 12px;
+    border-radius: var(--radius-full);
+    background: var(--color-bg-elevated);
+    border: 2px solid var(--color-primary);
+    cursor: grab;
+}
+
+.small-slider:focus {
+    outline: none;
+}
+
+.small-slider:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+}
+
+/* Option Buttons (radio-style) */
+.control-buttons {
+    display: flex;
+    gap: 2px;
+    background-color: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    padding: 2px;
+}
+
+.option-btn {
+    padding: var(--space-xs) var(--space-sm);
+    background: transparent;
+    border: none;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-family: inherit;
+    font-size: var(--font-size-xs);
+    color: var(--color-text-muted);
+    transition: all var(--transition-fast);
+    white-space: nowrap;
+}
+
+.option-btn:hover {
+    color: var(--color-text-secondary);
+    background-color: var(--color-bg-hover);
+}
+
+.option-btn.active {
+    background-color: var(--color-primary-light);
+    color: var(--color-primary);
+}
+
+.option-btn:focus {
+    outline: none;
+}
+
+.option-btn:focus-visible {
+    box-shadow: var(--focus-ring);
+}
+
+/* Display Mode Grid */
+.display-mode-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--space-xs);
+    width: 100%;
+}
+
+.mode-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-xs);
+    padding: var(--space-sm);
+    background-color: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    font-family: inherit;
+    font-size: var(--font-size-xs);
+    color: var(--color-text-muted);
+    transition: all var(--transition-fast);
+}
+
+.mode-btn:hover {
+    background-color: var(--color-bg-hover);
+    border-color: var(--color-border-strong);
+    color: var(--color-text-secondary);
+}
+
+.mode-btn.active {
+    background-color: var(--color-primary-light);
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+}
+
+.mode-btn:focus {
+    outline: none;
+}
+
+.mode-btn:focus-visible {
+    box-shadow: var(--focus-ring);
+}
+
+.mode-btn svg {
+    width: 24px;
+    height: 24px;
+}
+
+/* Toggle Switch */
+.toggle-switch {
+    position: relative;
+    width: 36px;
+    height: 20px;
+    flex-shrink: 0;
+}
+
+.toggle-input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: var(--color-border-strong);
+    border-radius: var(--radius-full);
+    transition: background-color var(--transition-fast);
+}
+
+.toggle-slider::before {
+    position: absolute;
+    content: "";
+    height: 14px;
+    width: 14px;
+    left: 3px;
+    bottom: 3px;
+    background-color: var(--color-bg-elevated);
+    border-radius: var(--radius-full);
+    transition: transform var(--transition-fast);
+    box-shadow: var(--shadow-sm);
+}
+
+.toggle-input:checked + .toggle-slider {
+    background-color: var(--color-primary);
+}
+
+.toggle-input:checked + .toggle-slider::before {
+    transform: translateX(16px);
+}
+
+.toggle-input:focus-visible + .toggle-slider {
+    box-shadow: var(--focus-ring);
+}
+
+/* Action Button */
+.action-btn {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    padding: var(--space-xs) var(--space-sm);
+    background: transparent;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-family: inherit;
+    font-size: var(--font-size-xs);
+    color: var(--color-text-secondary);
+    transition: all var(--transition-fast);
+}
+
+.action-btn:hover {
+    background-color: var(--color-bg-hover);
+    border-color: var(--color-border-strong);
+    color: var(--color-text);
+}
+
+.action-btn:focus {
+    outline: none;
+}
+
+.action-btn:focus-visible {
+    box-shadow: var(--focus-ring);
+}
+
+.action-btn svg {
+    width: 14px;
+    height: 14px;
+    transition: transform var(--transition-fast);
+}
+
+.action-btn.collapsed svg {
+    transform: rotate(180deg);
+}
+
+/* Reset All Section */
+.reset-all-section {
+    padding-top: var(--space-sm);
+    border-top: 1px solid var(--color-border);
+}
+
+.btn-full {
+    width: 100%;
+    justify-content: center;
+}
+
+.btn-danger {
+    background-color: transparent;
+    color: var(--color-error);
+    border: 1px solid var(--color-error);
+}
+
+.btn-danger:hover {
+    background-color: var(--color-error);
+    color: white;
+}
+
 /* ===== Info Section ===== */
 .info-section {
     margin-top: var(--space-xs);
@@ -1497,6 +1914,114 @@ body {
     .btn-danger:hover {
         background-color: Mark;
         color: HighlightText;
+    }
+
+    /* Advanced Section high contrast support */
+    .advanced-toggle {
+        border: 2px solid ButtonText;
+    }
+
+    .advanced-toggle:focus-visible {
+        outline: 2px solid Highlight;
+        outline-offset: 2px;
+        box-shadow: none;
+    }
+
+    .advanced-badge {
+        background-color: Highlight;
+        color: HighlightText;
+    }
+
+    .advanced-content {
+        border: 2px solid ButtonText;
+    }
+
+    .style-section {
+        border: 2px solid ButtonText;
+    }
+
+    .section-header:focus-visible {
+        outline: 2px solid Highlight;
+        outline-offset: -2px;
+        box-shadow: none;
+    }
+
+    .control-buttons {
+        border: 2px solid ButtonText;
+    }
+
+    .option-btn {
+        border: 1px solid transparent;
+    }
+
+    .option-btn.active {
+        background-color: Highlight;
+        color: HighlightText;
+    }
+
+    .option-btn:focus-visible {
+        outline: 2px solid Highlight;
+        outline-offset: 2px;
+        box-shadow: none;
+    }
+
+    .mode-btn {
+        border: 2px solid ButtonText;
+    }
+
+    .mode-btn.active {
+        background-color: Highlight;
+        color: HighlightText;
+        border-color: Highlight;
+    }
+
+    .mode-btn:focus-visible {
+        outline: 2px solid Highlight;
+        outline-offset: 2px;
+        box-shadow: none;
+    }
+
+    .toggle-slider {
+        border: 2px solid ButtonText;
+    }
+
+    .toggle-input:checked + .toggle-slider {
+        background-color: Highlight;
+    }
+
+    .toggle-input:focus-visible + .toggle-slider {
+        outline: 2px solid Highlight;
+        outline-offset: 2px;
+        box-shadow: none;
+    }
+
+    .action-btn {
+        border: 2px solid ButtonText;
+    }
+
+    .action-btn:focus-visible {
+        outline: 2px solid Highlight;
+        outline-offset: 2px;
+        box-shadow: none;
+    }
+
+    .small-slider {
+        background: ButtonText;
+    }
+
+    .small-slider::-webkit-slider-thumb {
+        background: ButtonFace;
+        border: 2px solid ButtonText;
+    }
+
+    .small-slider::-moz-range-thumb {
+        background: ButtonFace;
+        border: 2px solid ButtonText;
+    }
+
+    .small-slider:focus-visible {
+        outline: 2px solid Highlight;
+        outline-offset: 2px;
     }
 
     /* Ensure all interactive elements have visible borders */

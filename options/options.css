@@ -6,7 +6,11 @@
  * Uses CSS custom properties for consistent theming.
  *
  * @author DoubleGate
- * @version 1.6.0
+ * @version 1.8.0
+ *
+ * Changelog:
+ * - v1.8.0: Added new-badge styling for Enhanced Styling section
+ * - v1.6.0: Initial options page styling
  */
 
 /* ===== CSS Custom Properties ===== */
@@ -169,6 +173,21 @@ body {
 .section-description {
     color: var(--color-text-secondary);
     font-size: var(--font-size-sm);
+}
+
+/* New Badge (v1.8.0) */
+.new-badge {
+    display: inline-flex;
+    align-items: center;
+    margin-left: var(--space-sm);
+    padding: 2px 8px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--color-primary);
+    background-color: var(--color-primary-light);
+    border-radius: var(--radius-sm);
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
 }
 
 /* ===== Shortcuts List ===== */
@@ -445,5 +464,11 @@ kbd {
     .options-header,
     .options-footer {
         border-color: ButtonText;
+    }
+
+    .new-badge {
+        background-color: Highlight;
+        color: HighlightText;
+        border: 1px solid Highlight;
     }
 }

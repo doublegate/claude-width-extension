@@ -2,7 +2,7 @@
  * Claude Chat Width Customizer - Background Script
  * =================================================
  *
- * VERSION 1.7.0 - Custom Presets
+ * VERSION 1.8.0 - Enhanced Styling
  *
  * Handles keyboard shortcuts (browser.commands API), badge updates,
  * context menu management, and communication between popup and content scripts.
@@ -16,15 +16,14 @@
  * - Recent widths tracking
  * - Custom presets support
  *
- * Changes from 1.6.0:
- * - Changed default width from 60% to 70%
- * - Added context menu support for quick preset access
- * - Added recent widths tracking
- * - Added migration for existing users
- * - Added custom presets support
+ * Changes from 1.7.0:
+ * - Changed default width from 70% to 85%
+ * - Changed badge color from terracotta to grey
+ * - Added migration version 2 for enhanced styling features
+ * - Added support for typography, display modes, code blocks, and visual tweaks
  *
  * @author DoubleGate
- * @version 1.7.0
+ * @version 1.8.0
  * @license MIT
  */
 
@@ -75,13 +74,98 @@
      * Current migration version.
      * @type {number}
      */
-    const CURRENT_MIGRATION_VERSION = 1;
+    const CURRENT_MIGRATION_VERSION = 2;
+
+    // =========================================================================
+    // ENHANCED STYLING STORAGE KEYS (v1.8.0)
+    // =========================================================================
+
+    /**
+     * Storage key for font size percentage.
+     * @type {string}
+     */
+    const FONT_SIZE_KEY = 'fontSizePercent';
+
+    /**
+     * Storage key for line height setting.
+     * @type {string}
+     */
+    const LINE_HEIGHT_KEY = 'lineHeight';
+
+    /**
+     * Storage key for message padding setting.
+     * @type {string}
+     */
+    const MESSAGE_PADDING_KEY = 'messagePadding';
+
+    /**
+     * Storage key for display mode.
+     * @type {string}
+     */
+    const DISPLAY_MODE_KEY = 'displayMode';
+
+    /**
+     * Storage key for code block max height.
+     * @type {string}
+     */
+    const CODE_BLOCK_HEIGHT_KEY = 'codeBlockMaxHeight';
+
+    /**
+     * Storage key for code block word wrap.
+     * @type {string}
+     */
+    const CODE_BLOCK_WRAP_KEY = 'codeBlockWordWrap';
+
+    /**
+     * Storage key for code blocks collapsed state.
+     * @type {string}
+     */
+    const CODE_BLOCKS_COLLAPSED_KEY = 'codeBlocksCollapsed';
+
+    /**
+     * Storage key for show timestamps.
+     * @type {string}
+     */
+    const SHOW_TIMESTAMPS_KEY = 'showTimestamps';
+
+    /**
+     * Storage key for show avatars.
+     * @type {string}
+     */
+    const SHOW_AVATARS_KEY = 'showAvatars';
+
+    /**
+     * Storage key for message bubble style.
+     * @type {string}
+     */
+    const BUBBLE_STYLE_KEY = 'messageBubbleStyle';
+
+    // =========================================================================
+    // ENHANCED STYLING DEFAULTS (v1.8.0)
+    // =========================================================================
+
+    /**
+     * Default values for enhanced styling features.
+     * @type {Object}
+     */
+    const ENHANCED_STYLING_DEFAULTS = {
+        [FONT_SIZE_KEY]: 100,           // 80-120
+        [LINE_HEIGHT_KEY]: 'normal',     // 'compact', 'normal', 'relaxed'
+        [MESSAGE_PADDING_KEY]: 'medium', // 'none', 'small', 'medium', 'large'
+        [DISPLAY_MODE_KEY]: 'comfortable', // 'compact', 'comfortable', 'spacious', 'custom'
+        [CODE_BLOCK_HEIGHT_KEY]: 400,    // 200, 400, 600, 0 (none/unlimited)
+        [CODE_BLOCK_WRAP_KEY]: false,
+        [CODE_BLOCKS_COLLAPSED_KEY]: false,
+        [SHOW_TIMESTAMPS_KEY]: true,
+        [SHOW_AVATARS_KEY]: true,
+        [BUBBLE_STYLE_KEY]: 'rounded'    // 'rounded', 'square', 'minimal'
+    };
 
     /**
      * Default width percentage.
      * @type {number}
      */
-    const DEFAULT_WIDTH = 70;
+    const DEFAULT_WIDTH = 85;
 
     /**
      * Minimum allowed width.
@@ -125,10 +209,10 @@
     const MAX_RECENT_WIDTHS = 3;
 
     /**
-     * Badge background color (Claude's terracotta).
+     * Badge background color (neutral grey).
      * @type {string}
      */
-    const BADGE_COLOR = '#D97757';
+    const BADGE_COLOR = '#6B7280';
 
     /**
      * Badge text color.
@@ -184,7 +268,7 @@
      * Initialize the background script.
      */
     async function initialize() {
-        console.log('[Claude Width Background] Initializing v1.7.0...');
+        console.log('[Claude Width Background] Initializing v1.8.0...');
 
         // Run migrations for existing users
         await runMigrations();
@@ -229,7 +313,6 @@
 
                     // Initialize new storage structure
                     const newData = {
-                        [MIGRATION_VERSION_KEY]: CURRENT_MIGRATION_VERSION,
                         [CUSTOM_PRESETS_KEY]: [],
                         [HIDDEN_PRESETS_KEY]: [],
                         [RECENT_WIDTHS_KEY]: []
@@ -250,6 +333,21 @@
                     await browser.storage.local.set(newData);
                     console.log('[Claude Width Background] Migration 1 complete');
                 }
+
+                // Migration 2: Add enhanced styling features (v1.8.0)
+                if (currentMigrationVersion < 2) {
+                    // Add all enhanced styling defaults - preserves all existing settings
+                    const enhancedData = {
+                        ...ENHANCED_STYLING_DEFAULTS
+                    };
+
+                    await browser.storage.local.set(enhancedData);
+                    console.log('[Claude Width Background] Migration 2 complete - Enhanced styling features initialized');
+                }
+
+                // Update migration version to current
+                await browser.storage.local.set({ [MIGRATION_VERSION_KEY]: CURRENT_MIGRATION_VERSION });
+                console.log(`[Claude Width Background] Migration version updated to ${CURRENT_MIGRATION_VERSION}`);
             }
         } catch (error) {
             console.error('[Claude Width Background] Migration error:', error);
