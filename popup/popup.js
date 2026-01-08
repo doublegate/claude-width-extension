@@ -1,24 +1,29 @@
 /**
  * Claude Chat Width Customizer - Popup Controller
  * ================================================
- * 
+ *
  * Handles user interactions in the extension popup, manages storage
  * of preferences, and communicates with content scripts on claude.ai tabs.
- * 
+ *
  * Features:
  * - Slider-based width selection with real-time preview
  * - Quick preset buttons for common width values
  * - Persistent storage of user preferences
  * - Live updates to all open claude.ai tabs
  * - Status indication showing if extension is active
- * 
- * Architecture:
- * - Uses browser.storage.local for preference persistence
- * - Sends messages to content scripts for immediate UI updates
- * - Queries active tabs to determine if user is on claude.ai
- * 
+ * - Full keyboard navigation support
+ * - Screen reader announcements
+ *
+ * Keyboard Shortcuts (popup):
+ * - 1: Select Narrow (50%)
+ * - 2: Select Medium (70%)
+ * - 3: Select Wide (85%)
+ * - 4: Select Full (100%)
+ * - R: Reset to default (60%)
+ * - Escape: Close popup
+ *
  * @author DoubleGate
- * @version 1.5.1
+ * @version 1.6.0
  * @license MIT
  */
 
@@ -54,14 +59,25 @@
     const MAX_WIDTH = 100;
 
     /**
-     * Preset width configurations.
-     * @type {Object<string, number>}
+     * Preset width configurations mapped by keyboard key.
+     * @type {Object<string, {width: number, name: string}>}
+     */
+    const PRESET_KEYS = {
+        '1': { width: 50, name: 'Narrow' },
+        '2': { width: 70, name: 'Medium' },
+        '3': { width: 85, name: 'Wide' },
+        '4': { width: 100, name: 'Full' }
+    };
+
+    /**
+     * Preset names by width value.
+     * @type {Object<number, string>}
      */
     const PRESETS = {
-        50: 'narrow',
-        70: 'medium',
-        85: 'wide',
-        100: 'full'
+        50: 'Narrow',
+        70: 'Medium',
+        85: 'Wide',
+        100: 'Full'
     };
 
     /**
@@ -81,6 +97,16 @@
      * @type {string[]}
      */
     const VALID_THEMES = ['light', 'dark', 'system'];
+
+    /**
+     * Theme display names for announcements.
+     * @type {Object<string, string>}
+     */
+    const THEME_NAMES = {
+        'light': 'Light',
+        'dark': 'Dark',
+        'system': 'System'
+    };
 
     // =========================================================================
     // DOM REFERENCES
@@ -112,6 +138,11 @@
     let statusTextElement;
 
     /**
+     * @type {HTMLSpanElement}
+     */
+    let nonDefaultIndicator;
+
+    /**
      * @type {NodeListOf<HTMLButtonElement>}
      */
     let presetButtons;
@@ -131,6 +162,12 @@
      */
     let themeButtons;
 
+    /**
+     * Screen reader announcements element.
+     * @type {HTMLElement}
+     */
+    let srAnnouncements;
+
     // =========================================================================
     // STATE
     // =========================================================================
@@ -145,7 +182,7 @@
      * Last saved/applied width.
      * @type {number}
      */
-    let savedWidth = DEFAULT_WIDTH;
+    let _savedWidth = DEFAULT_WIDTH;
 
     /**
      * Whether user is currently on a claude.ai tab.
@@ -158,6 +195,12 @@
      * @type {string}
      */
     let currentTheme = DEFAULT_THEME;
+
+    /**
+     * All focusable elements in the popup (for focus trap).
+     * @type {HTMLElement[]}
+     */
+    let focusableElements = [];
 
     // =========================================================================
     // INITIALIZATION
@@ -173,18 +216,37 @@
         previewBarElement = document.getElementById('previewBar');
         statusDotElement = document.getElementById('statusDot');
         statusTextElement = document.getElementById('statusText');
+        nonDefaultIndicator = document.getElementById('nonDefaultIndicator');
         presetButtons = document.querySelectorAll('.preset-btn');
         applyButton = document.getElementById('applyBtn');
         resetButton = document.getElementById('resetBtn');
         themeButtons = document.querySelectorAll('.theme-btn');
+        srAnnouncements = document.getElementById('srAnnouncements');
 
         // Set up event listeners
         setupEventListeners();
+
+        // Cache focusable elements for focus trap
+        cacheFocusableElements();
 
         // Load saved preferences and check status
         loadSavedTheme();
         loadSavedPreference();
         checkClaudeTabStatus();
+
+        // Set initial focus to slider after a brief delay
+        setTimeout(() => {
+            sliderElement.focus();
+        }, 100);
+    }
+
+    /**
+     * Cache all focusable elements for focus trap functionality.
+     */
+    function cacheFocusableElements() {
+        const selector = 'button, input, [tabindex]:not([tabindex="-1"]), details summary';
+        focusableElements = Array.from(document.querySelectorAll(selector))
+            .filter(el => !el.disabled && el.offsetParent !== null);
     }
 
     /**
@@ -193,7 +255,7 @@
     function setupEventListeners() {
         // Slider input (live preview)
         sliderElement.addEventListener('input', handleSliderInput);
-        
+
         // Slider change (final value)
         sliderElement.addEventListener('change', handleSliderChange);
 
@@ -215,6 +277,12 @@
         themeButtons.forEach(button => {
             button.addEventListener('click', handleThemeClick);
         });
+
+        // Global keyboard shortcuts for popup
+        document.addEventListener('keydown', handleGlobalKeydown);
+
+        // Focus trap
+        document.addEventListener('keydown', handleFocusTrap);
     }
 
     // =========================================================================
@@ -224,7 +292,7 @@
     /**
      * Handle slider input (fires continuously while dragging).
      * Updates visual preview without saving.
-     * 
+     *
      * @param {InputEvent} event - The input event
      */
     function handleSliderInput(event) {
@@ -236,8 +304,8 @@
 
     /**
      * Handle slider change (fires when dragging stops).
-     * Could be used for auto-save if desired.
-     * 
+     * Saves and announces the change.
+     *
      * @param {Event} event - The change event
      */
     function handleSliderChange(event) {
@@ -245,23 +313,40 @@
         selectedWidth = value;
         // Auto-apply on change for better UX
         saveAndApplyWidth(value);
+        announceChange(`Width set to ${value} percent`);
     }
 
     /**
      * Handle preset button clicks.
-     * 
+     *
      * @param {MouseEvent} event - The click event
      */
     function handlePresetClick(event) {
         const button = event.currentTarget;
         const width = parseInt(button.dataset.width, 10);
-        
+
         if (width >= MIN_WIDTH && width <= MAX_WIDTH) {
-            selectedWidth = width;
-            sliderElement.value = width;
-            updateDisplay(width);
-            updatePresetHighlight(width);
-            saveAndApplyWidth(width);
+            selectPreset(width);
+        }
+    }
+
+    /**
+     * Select a preset width and apply it.
+     *
+     * @param {number} width - Width value to set
+     */
+    function selectPreset(width) {
+        selectedWidth = width;
+        sliderElement.value = width;
+        updateDisplay(width);
+        updatePresetHighlight(width);
+        saveAndApplyWidth(width);
+
+        const presetName = PRESETS[width] || '';
+        if (presetName) {
+            announceChange(`${presetName} preset selected, ${width} percent width`);
+        } else {
+            announceChange(`Width set to ${width} percent`);
         }
     }
 
@@ -271,6 +356,7 @@
     function handleApplyClick() {
         saveAndApplyWidth(selectedWidth);
         showApplyFeedback();
+        announceChange(`Width applied: ${selectedWidth} percent`);
     }
 
     /**
@@ -282,11 +368,12 @@
         updateDisplay(DEFAULT_WIDTH);
         updatePresetHighlight(DEFAULT_WIDTH);
         saveAndApplyWidth(DEFAULT_WIDTH);
+        announceChange(`Width reset to default, ${DEFAULT_WIDTH} percent`);
     }
 
     /**
      * Handle keyboard navigation on slider for accessibility.
-     * 
+     *
      * @param {KeyboardEvent} event - The keydown event
      */
     function handleSliderKeydown(event) {
@@ -298,6 +385,8 @@
             selectedWidth = newValue;
             updateDisplay(newValue);
             updatePresetHighlight(newValue);
+            saveAndApplyWidth(newValue);
+            announceChange(`Width set to ${newValue} percent`);
         } else if (event.key === 'PageDown') {
             event.preventDefault();
             const newValue = Math.max(MIN_WIDTH, selectedWidth - 10);
@@ -305,6 +394,90 @@
             selectedWidth = newValue;
             updateDisplay(newValue);
             updatePresetHighlight(newValue);
+            saveAndApplyWidth(newValue);
+            announceChange(`Width set to ${newValue} percent`);
+        } else if (event.key === 'Home') {
+            event.preventDefault();
+            sliderElement.value = MIN_WIDTH;
+            selectedWidth = MIN_WIDTH;
+            updateDisplay(MIN_WIDTH);
+            updatePresetHighlight(MIN_WIDTH);
+            saveAndApplyWidth(MIN_WIDTH);
+            announceChange(`Width set to minimum, ${MIN_WIDTH} percent`);
+        } else if (event.key === 'End') {
+            event.preventDefault();
+            sliderElement.value = MAX_WIDTH;
+            selectedWidth = MAX_WIDTH;
+            updateDisplay(MAX_WIDTH);
+            updatePresetHighlight(MAX_WIDTH);
+            saveAndApplyWidth(MAX_WIDTH);
+            announceChange(`Width set to maximum, ${MAX_WIDTH} percent`);
+        }
+    }
+
+    /**
+     * Handle global keyboard shortcuts for the popup.
+     *
+     * @param {KeyboardEvent} event - The keydown event
+     */
+    function handleGlobalKeydown(event) {
+        // Don't handle if user is in a text input (shouldn't happen in this popup)
+        if (event.target.tagName === 'INPUT' && event.target.type === 'text') {
+            return;
+        }
+
+        // Don't handle if modifier keys are pressed (except for shortcuts that use them)
+        if (event.ctrlKey || event.altKey || event.metaKey) {
+            return;
+        }
+
+        const key = event.key.toLowerCase();
+
+        // Number keys 1-4 for presets
+        if (PRESET_KEYS[key]) {
+            event.preventDefault();
+            selectPreset(PRESET_KEYS[key].width);
+            return;
+        }
+
+        // R key for reset
+        if (key === 'r' && event.target !== sliderElement) {
+            event.preventDefault();
+            handleResetClick();
+            return;
+        }
+
+        // Escape to close popup
+        if (event.key === 'Escape') {
+            event.preventDefault();
+            window.close();
+            return;
+        }
+    }
+
+    /**
+     * Handle focus trap to keep focus within popup.
+     *
+     * @param {KeyboardEvent} event - The keydown event
+     */
+    function handleFocusTrap(event) {
+        if (event.key !== 'Tab') return;
+
+        const firstElement = focusableElements[0];
+        const lastElement = focusableElements[focusableElements.length - 1];
+
+        if (event.shiftKey) {
+            // Shift + Tab: going backwards
+            if (document.activeElement === firstElement) {
+                event.preventDefault();
+                lastElement.focus();
+            }
+        } else {
+            // Tab: going forwards
+            if (document.activeElement === lastElement) {
+                event.preventDefault();
+                firstElement.focus();
+            }
         }
     }
 
@@ -322,6 +495,28 @@
             applyTheme(theme);
             updateThemeButtons(theme);
             saveTheme(theme);
+            announceChange(`Theme changed to ${THEME_NAMES[theme]}`);
+        }
+    }
+
+    // =========================================================================
+    // SCREEN READER ANNOUNCEMENTS
+    // =========================================================================
+
+    /**
+     * Announce a change to screen readers.
+     *
+     * @param {string} message - Message to announce
+     */
+    function announceChange(message) {
+        if (srAnnouncements) {
+            // Clear first to ensure announcement is made even if same text
+            srAnnouncements.textContent = '';
+
+            // Use setTimeout to ensure the DOM updates
+            setTimeout(() => {
+                srAnnouncements.textContent = message;
+            }, 50);
         }
     }
 
@@ -331,26 +526,45 @@
 
     /**
      * Update all display elements to reflect current width value.
-     * 
+     *
      * @param {number} width - Width percentage to display
      */
     function updateDisplay(width) {
         // Update numeric display
         widthValueElement.textContent = width;
-        
+
         // Add pulse animation
         widthValueElement.classList.add('updating');
         setTimeout(() => widthValueElement.classList.remove('updating'), 150);
-        
-        // Update slider ARIA attribute
+
+        // Update slider ARIA attributes
         sliderElement.setAttribute('aria-valuenow', width);
-        
+        sliderElement.setAttribute('aria-valuetext', `${width} percent`);
+
         // Update slider visual progress
         const progress = ((width - MIN_WIDTH) / (MAX_WIDTH - MIN_WIDTH)) * 100;
         sliderElement.style.setProperty('--slider-progress', `${progress}%`);
-        
+
         // Update preview bar width
         previewBarElement.style.width = `${width}%`;
+
+        // Update non-default indicator
+        updateNonDefaultIndicator(width);
+    }
+
+    /**
+     * Update the non-default indicator visibility.
+     *
+     * @param {number} width - Current width value
+     */
+    function updateNonDefaultIndicator(width) {
+        if (nonDefaultIndicator) {
+            if (width !== DEFAULT_WIDTH) {
+                nonDefaultIndicator.hidden = false;
+            } else {
+                nonDefaultIndicator.hidden = true;
+            }
+        }
     }
 
     /**
@@ -361,7 +575,9 @@
     function updatePresetHighlight(width) {
         presetButtons.forEach(button => {
             const presetWidth = parseInt(button.dataset.width, 10);
-            button.classList.toggle('active', presetWidth === width);
+            const isActive = presetWidth === width;
+            button.classList.toggle('active', isActive);
+            button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
         });
     }
 
@@ -383,19 +599,19 @@
         themeButtons.forEach(button => {
             const isActive = button.dataset.theme === activeTheme;
             button.classList.toggle('active', isActive);
-            button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+            button.setAttribute('aria-checked', isActive ? 'true' : 'false');
         });
     }
 
     /**
      * Update status indicator based on current tab.
-     * 
+     *
      * @param {boolean} active - Whether on claude.ai tab
      * @param {string} [message] - Optional status message
      */
     function updateStatus(active, message) {
         statusDotElement.classList.remove('active', 'inactive', 'error');
-        
+
         if (active) {
             statusDotElement.classList.add('active');
             statusTextElement.textContent = message || 'Active on claude.ai';
@@ -421,6 +637,7 @@
         svg.setAttribute('class', 'btn-icon');
         svg.setAttribute('viewBox', '0 0 16 16');
         svg.setAttribute('fill', 'none');
+        svg.setAttribute('aria-hidden', 'true');
 
         const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
         path.setAttribute('d', 'M13.78 4.22a.75.75 0 010 1.06l-7.25 7.25a.75.75 0 01-1.06 0L2.22 9.28a.75.75 0 011.06-1.06L6 10.94l6.72-6.72a.75.75 0 011.06 0z');
@@ -488,20 +705,20 @@
         try {
             const result = await browser.storage.local.get(STORAGE_KEY);
             const stored = result[STORAGE_KEY];
-            
+
             if (typeof stored === 'number' && stored >= MIN_WIDTH && stored <= MAX_WIDTH) {
-                savedWidth = stored;
+                _savedWidth = stored;
                 selectedWidth = stored;
             } else {
-                savedWidth = DEFAULT_WIDTH;
+                _savedWidth = DEFAULT_WIDTH;
                 selectedWidth = DEFAULT_WIDTH;
             }
-            
+
             // Update UI with loaded value
             sliderElement.value = selectedWidth;
             updateDisplay(selectedWidth);
             updatePresetHighlight(selectedWidth);
-            
+
         } catch (error) {
             console.error('[Claude Width Popup] Error loading preference:', error);
             // Use defaults on error
@@ -512,20 +729,28 @@
 
     /**
      * Save width preference to storage and notify content scripts.
-     * 
+     *
      * @param {number} width - Width percentage to save
      */
     async function saveAndApplyWidth(width) {
         try {
             // Save to storage
             await browser.storage.local.set({ [STORAGE_KEY]: width });
-            savedWidth = width;
-            
+            _savedWidth = width;
+
             console.log(`[Claude Width Popup] Saved width: ${width}%`);
-            
+
             // Notify all claude.ai tabs
             notifyClaudeTabs(width);
-            
+
+            // Request badge update from background script
+            try {
+                await browser.runtime.sendMessage({ action: 'updateBadge' });
+            } catch (e) {
+                // Background script might not be ready
+                console.log('[Claude Width Popup] Could not update badge');
+            }
+
         } catch (error) {
             console.error('[Claude Width Popup] Error saving preference:', error);
             updateStatus(false, 'Error saving');
@@ -542,11 +767,11 @@
     async function checkClaudeTabStatus() {
         try {
             const tabs = await browser.tabs.query({ active: true, currentWindow: true });
-            
+
             if (tabs.length > 0) {
                 const currentTab = tabs[0];
                 isOnClaudeTab = currentTab.url && currentTab.url.includes('claude.ai');
-                
+
                 if (isOnClaudeTab) {
                     // Try to get status from content script
                     try {
@@ -572,13 +797,13 @@
 
     /**
      * Send width update to all claude.ai tabs.
-     * 
+     *
      * @param {number} width - New width value to apply
      */
     async function notifyClaudeTabs(width) {
         try {
             const tabs = await browser.tabs.query({ url: '*://claude.ai/*' });
-            
+
             for (const tab of tabs) {
                 try {
                     await browser.tabs.sendMessage(tab.id, {
@@ -590,7 +815,7 @@
                     console.log(`[Claude Width Popup] Could not notify tab ${tab.id}`);
                 }
             }
-            
+
             if (tabs.length > 0) {
                 updateStatus(true, `Applied to ${tabs.length} tab${tabs.length > 1 ? 's' : ''}`);
             }

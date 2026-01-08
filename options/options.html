@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<!--
+  Claude Chat Width Customizer - Options Page
+  ===========================================
+
+  Allows users to view and customize keyboard shortcuts.
+  Firefox requires users to customize shortcuts via about:addons,
+  so this page primarily serves as documentation and a link to the settings.
+
+  @author DoubleGate
+  @version 1.6.0
+-->
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Claude Width Settings</title>
+    <link rel="stylesheet" href="options.css">
+</head>
+<body>
+    <div class="options-container">
+        <!-- Header -->
+        <header class="options-header">
+            <div class="header-content">
+                <svg class="logo-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                    <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <div class="header-text">
+                    <h1>Claude Chat Width</h1>
+                    <span class="version">v1.6.0</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="options-main">
+            <!-- Keyboard Shortcuts Section -->
+            <section class="options-section" aria-labelledby="shortcuts-heading">
+                <h2 id="shortcuts-heading">
+                    <svg class="section-icon" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                        <rect x="1" y="4" width="14" height="9" rx="1" stroke="currentColor" stroke-width="1.5"/>
+                        <line x1="4" y1="7" x2="6" y2="7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                        <line x1="7" y1="7" x2="9" y2="7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                        <line x1="10" y1="7" x2="12" y2="7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                        <line x1="5" y1="10" x2="11" y2="10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                    </svg>
+                    Keyboard Shortcuts
+                </h2>
+
+                <div class="shortcuts-list" role="list">
+                    <div class="shortcut-item" role="listitem">
+                        <div class="shortcut-info">
+                            <span class="shortcut-name">Open Popup</span>
+                            <span class="shortcut-description">Opens the width control popup</span>
+                        </div>
+                        <div class="shortcut-keys">
+                            <kbd>Alt</kbd>
+                            <span class="key-separator">+</span>
+                            <kbd>Shift</kbd>
+                            <span class="key-separator">+</span>
+                            <kbd>W</kbd>
+                        </div>
+                    </div>
+
+                    <div class="shortcut-item" role="listitem">
+                        <div class="shortcut-info">
+                            <span class="shortcut-name">Cycle Presets</span>
+                            <span class="shortcut-description">Cycles through 50% - 70% - 85% - 100%</span>
+                        </div>
+                        <div class="shortcut-keys">
+                            <kbd>Alt</kbd>
+                            <span class="key-separator">+</span>
+                            <kbd>Shift</kbd>
+                            <span class="key-separator">+</span>
+                            <kbd>C</kbd>
+                        </div>
+                    </div>
+
+                    <div class="shortcut-item" role="listitem">
+                        <div class="shortcut-info">
+                            <span class="shortcut-name">Toggle Default</span>
+                            <span class="shortcut-description">Toggles between current width and 60%</span>
+                        </div>
+                        <div class="shortcut-keys">
+                            <kbd>Alt</kbd>
+                            <span class="key-separator">+</span>
+                            <kbd>Shift</kbd>
+                            <span class="key-separator">+</span>
+                            <kbd>D</kbd>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="shortcuts-note">
+                    <svg class="note-icon" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                        <circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.5"/>
+                        <path d="M8 5V5.5M8 7V11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                    </svg>
+                    <p>
+                        To customize these shortcuts, go to <strong>about:addons</strong>, click the
+                        <strong>gear icon</strong>, then select <strong>"Manage Extension Shortcuts"</strong>.
+                    </p>
+                </div>
+
+                <a href="about:addons" class="btn btn-primary" id="manageShortcutsBtn">
+                    <svg class="btn-icon" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                        <path d="M8 1C4.13401 1 1 4.13401 1 8C1 11.866 4.13401 15 8 15C11.866 15 15 11.866 15 8C15 4.13401 11.866 1 8 1Z" stroke="currentColor" stroke-width="1.5"/>
+                        <path d="M6.5 6C6.5 5.17157 7.17157 4.5 8 4.5C8.82843 4.5 9.5 5.17157 9.5 6C9.5 6.82843 8.82843 7.5 8 7.5V9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                        <circle cx="8" cy="11" r="0.75" fill="currentColor"/>
+                    </svg>
+                    Open Add-ons Manager
+                </a>
+            </section>
+
+            <!-- Popup Shortcuts Section -->
+            <section class="options-section" aria-labelledby="popup-shortcuts-heading">
+                <h2 id="popup-shortcuts-heading">
+                    <svg class="section-icon" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                        <rect x="2" y="2" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.5"/>
+                        <path d="M5 6H11M5 8H9M5 10H7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                    </svg>
+                    Popup Keyboard Shortcuts
+                </h2>
+
+                <p class="section-description">
+                    When the popup is open, you can use these keyboard shortcuts:
+                </p>
+
+                <div class="shortcuts-list compact" role="list">
+                    <div class="shortcut-item" role="listitem">
+                        <span class="shortcut-name">Select Narrow (50%)</span>
+                        <div class="shortcut-keys">
+                            <kbd>1</kbd>
+                        </div>
+                    </div>
+                    <div class="shortcut-item" role="listitem">
+                        <span class="shortcut-name">Select Medium (70%)</span>
+                        <div class="shortcut-keys">
+                            <kbd>2</kbd>
+                        </div>
+                    </div>
+                    <div class="shortcut-item" role="listitem">
+                        <span class="shortcut-name">Select Wide (85%)</span>
+                        <div class="shortcut-keys">
+                            <kbd>3</kbd>
+                        </div>
+                    </div>
+                    <div class="shortcut-item" role="listitem">
+                        <span class="shortcut-name">Select Full (100%)</span>
+                        <div class="shortcut-keys">
+                            <kbd>4</kbd>
+                        </div>
+                    </div>
+                    <div class="shortcut-item" role="listitem">
+                        <span class="shortcut-name">Reset to Default</span>
+                        <div class="shortcut-keys">
+                            <kbd>R</kbd>
+                        </div>
+                    </div>
+                    <div class="shortcut-item" role="listitem">
+                        <span class="shortcut-name">Close Popup</span>
+                        <div class="shortcut-keys">
+                            <kbd>Esc</kbd>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Accessibility Section -->
+            <section class="options-section" aria-labelledby="accessibility-heading">
+                <h2 id="accessibility-heading">
+                    <svg class="section-icon" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                        <circle cx="8" cy="3" r="2" stroke="currentColor" stroke-width="1.5"/>
+                        <path d="M4 7H12M8 7V14M5 14L8 11L11 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    Accessibility
+                </h2>
+
+                <p class="section-description">
+                    This extension is designed with accessibility in mind:
+                </p>
+
+                <ul class="feature-list">
+                    <li>
+                        <strong>Keyboard Navigation:</strong> All controls are accessible via keyboard
+                    </li>
+                    <li>
+                        <strong>Screen Reader Support:</strong> ARIA labels and live announcements for all changes
+                    </li>
+                    <li>
+                        <strong>Reduced Motion:</strong> Respects your system's "reduce motion" preference
+                    </li>
+                    <li>
+                        <strong>High Contrast:</strong> Works with Windows High Contrast mode
+                    </li>
+                    <li>
+                        <strong>Focus Indicators:</strong> Clear visual focus indicators for keyboard users
+                    </li>
+                </ul>
+            </section>
+
+            <!-- About Section -->
+            <section class="options-section" aria-labelledby="about-heading">
+                <h2 id="about-heading">
+                    <svg class="section-icon" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                        <circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.5"/>
+                        <path d="M8 5V5.5M8 7V11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                    </svg>
+                    About
+                </h2>
+
+                <div class="about-content">
+                    <p>
+                        <strong>Claude Chat Width Customizer</strong> adjusts the width of the main chat
+                        area on claude.ai without affecting the sidebar.
+                    </p>
+                    <p>
+                        This extension does not collect any user data. Your preferences are stored
+                        locally in your browser.
+                    </p>
+                </div>
+
+                <div class="about-links">
+                    <a href="https://github.com/doublegate/claude-width-extension"
+                       target="_blank"
+                       rel="noopener noreferrer"
+                       class="link-external">
+                        <svg class="link-icon" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                            <path d="M8 1C4.13401 1 1 4.13401 1 8C1 11.0587 2.95482 13.6561 5.69375 14.6775C6.04375 14.7393 6.17187 14.5243 6.17187 14.3387C6.17187 14.1719 6.16563 13.5894 6.1625 12.9612C4.30937 13.4006 3.8975 12.1456 3.8975 12.1456C3.57812 11.2612 3.11875 11.0456 3.11875 11.0456C2.48438 10.6081 3.16875 10.6175 3.16875 10.6175C3.87188 10.6675 4.24062 11.3456 4.24062 11.3456C4.86875 12.4331 5.8875 12.1144 6.18438 11.9362C6.24688 11.4544 6.4375 11.1362 6.64687 10.96C5.14687 10.7837 3.57187 10.1894 3.57187 7.51C3.57187 6.67187 3.84375 5.98625 4.25312 5.44875C4.18125 5.27 3.94062 4.49437 4.32187 3.43812C4.32187 3.43812 4.9125 3.25 6.15312 4.24187C6.71563 4.0875 7.32188 4.01 7.92188 4.0075C8.52188 4.01 9.12813 4.0875 9.69063 4.24187C10.9312 3.25 11.5219 3.43812 11.5219 3.43812C11.9031 4.49437 11.6625 5.27 11.5906 5.44875C12 5.98625 12.2719 6.67187 12.2719 7.51C12.2719 10.1969 10.6937 10.7806 9.18438 10.9538C9.44688 11.175 9.68125 11.6106 9.68125 12.2762C9.68125 13.2294 9.67188 13.9975 9.67188 14.3387C9.67188 14.5262 9.79687 14.7431 10.1562 14.6769C12.8906 13.6531 14.8438 11.0569 14.8438 8C14.8438 4.13401 11.866 1 8 1Z" fill="currentColor"/>
+                        </svg>
+                        GitHub Repository
+                    </a>
+                    <a href="https://github.com/doublegate/claude-width-extension/issues"
+                       target="_blank"
+                       rel="noopener noreferrer"
+                       class="link-external">
+                        <svg class="link-icon" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                            <circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.5"/>
+                            <path d="M5.5 9.5C5.5 9.5 6.5 11 8 11C9.5 11 10.5 9.5 10.5 9.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                            <circle cx="5.5" cy="6.5" r="0.75" fill="currentColor"/>
+                            <circle cx="10.5" cy="6.5" r="0.75" fill="currentColor"/>
+                        </svg>
+                        Report an Issue
+                    </a>
+                </div>
+            </section>
+        </main>
+
+        <!-- Footer -->
+        <footer class="options-footer">
+            <p>Made with care by <a href="https://github.com/doublegate" target="_blank" rel="noopener noreferrer">DoubleGate</a></p>
+        </footer>
+    </div>
+
+    <script src="options.js"></script>
+</body>
+</html>

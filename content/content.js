@@ -1,17 +1,20 @@
 /**
  * Claude Chat Width Customizer - Content Script
  * ==============================================
- * 
- * VERSION 1.3.0 - Fixed width application
- * 
- * Changes from 1.2.0:
- * - Removed isInsideMain() check (Claude may not use <main> tag)
- * - Keep strict sidebar exclusion via isInsideSidebar()
- * - Force update styles when width changes (clear and reapply)
- * - Better element targeting with debug logging
- * 
+ *
+ * VERSION 1.6.0 - Keyboard & Accessibility
+ *
+ * Injected into claude.ai pages to apply width customizations to the chat area.
+ * Works with the background script to handle keyboard shortcuts for preset
+ * cycling and default toggling.
+ *
+ * Changes from 1.5.1:
+ * - Updated version to 1.6.0
+ * - Added support for cyclePresets and toggleDefault message actions
+ * - Improved logging for debugging keyboard shortcuts
+ *
  * @author DoubleGate
- * @version 1.5.1
+ * @version 1.6.0
  * @license MIT
  */
 
@@ -28,6 +31,12 @@
     const STYLE_ELEMENT_ID = 'claude-width-customizer-styles';
     const STORAGE_KEY = 'chatWidthPercent';
     const DATA_ATTR = 'data-claude-width-applied';
+
+    /**
+     * Width presets for cycling (in order).
+     * @type {number[]}
+     */
+    const PRESET_CYCLE = [50, 70, 85, 100];
 
     // Selectors that indicate an element is part of the sidebar
     const SIDEBAR_INDICATORS = [
@@ -74,13 +83,13 @@
     /**
      * Check if an element is inside the sidebar.
      * Walks up the DOM tree checking for sidebar indicators.
-     * 
+     *
      * @param {Element} element - The element to check
      * @returns {boolean} True if element is inside sidebar
      */
     function isInsideSidebar(element) {
         let current = element;
-        
+
         while (current && current !== document.body && current !== document.documentElement) {
             for (const selector of SIDEBAR_INDICATORS) {
                 try {
@@ -93,7 +102,7 @@
             }
             current = current.parentElement;
         }
-        
+
         return false;
     }
 
@@ -115,7 +124,7 @@
 
     /**
      * Apply width style to an element (only max-width for most elements).
-     * 
+     *
      * @param {Element} element - Element to style
      * @param {number} widthPercent - Width percentage
      * @param {boolean} setWidth - Also set width property (for containers)
@@ -123,7 +132,7 @@
     function styleElement(element, widthPercent, setWidth = false) {
         if (!element || !element.style) return;
         if (isInsideSidebar(element)) return;
-        
+
         element.style.maxWidth = `${widthPercent}%`;
         if (setWidth) {
             element.style.width = `${widthPercent}%`;
@@ -140,17 +149,17 @@
 
     /**
      * Find and style all relevant elements in the chat area.
-     * 
+     *
      * @param {number} widthPercent - Width percentage to apply
      */
     function applyWidthToChat(widthPercent) {
         const clampedWidth = Math.max(MIN_WIDTH_PERCENT, Math.min(MAX_WIDTH_PERCENT, widthPercent));
-        
+
         // Clear previous styles if width changed
         if (clampedWidth !== currentWidth) {
             clearAllStyles();
         }
-        
+
         let elementCount = 0;
 
         // Strategy: Target elements that contain "mx-auto" which is Tailwind's
@@ -230,17 +239,89 @@
 
     /**
      * Debounced version of applyWidthToChat to prevent excessive calls.
-     * 
+     *
      * @param {number} widthPercent - Width percentage to apply
      */
     function applyWidthDebounced(widthPercent) {
         if (applyDebounceTimer) {
             clearTimeout(applyDebounceTimer);
         }
-        
+
         applyDebounceTimer = setTimeout(() => {
             applyWidthToChat(widthPercent);
         }, 50);
+    }
+
+    // =========================================================================
+    // PRESET CYCLING
+    // =========================================================================
+
+    /**
+     * Cycle to the next width preset.
+     *
+     * @returns {number} The new width value
+     */
+    function cycleToNextPreset() {
+        // Find current position in cycle
+        const currentIndex = PRESET_CYCLE.indexOf(currentWidth);
+
+        // Get next preset (wrap around)
+        let nextIndex;
+        if (currentIndex === -1) {
+            // Current width not in presets, find nearest higher
+            nextIndex = 0;
+            for (let i = 0; i < PRESET_CYCLE.length; i++) {
+                if (PRESET_CYCLE[i] > currentWidth) {
+                    nextIndex = i;
+                    break;
+                }
+            }
+        } else {
+            nextIndex = (currentIndex + 1) % PRESET_CYCLE.length;
+        }
+
+        const newWidth = PRESET_CYCLE[nextIndex];
+        clearAllStyles();
+        applyWidthToChat(newWidth);
+
+        // Save to storage
+        browser.storage.local.set({ [STORAGE_KEY]: newWidth });
+
+        console.log(`[Claude Width] Cycled to preset: ${newWidth}%`);
+        return newWidth;
+    }
+
+    /**
+     * Toggle between current width and default.
+     *
+     * @returns {number} The new width value
+     */
+    async function toggleDefault() {
+        const LAST_WIDTH_KEY = 'lastNonDefaultWidth';
+
+        if (currentWidth === DEFAULT_WIDTH_PERCENT) {
+            // Restore last non-default width
+            const result = await browser.storage.local.get(LAST_WIDTH_KEY);
+            const lastWidth = result[LAST_WIDTH_KEY];
+
+            if (typeof lastWidth === 'number' && lastWidth !== DEFAULT_WIDTH_PERCENT) {
+                clearAllStyles();
+                applyWidthToChat(lastWidth);
+                await browser.storage.local.set({ [STORAGE_KEY]: lastWidth });
+                console.log(`[Claude Width] Toggled to last width: ${lastWidth}%`);
+                return lastWidth;
+            }
+        } else {
+            // Save current as last non-default, then set to default
+            await browser.storage.local.set({ [LAST_WIDTH_KEY]: currentWidth });
+            clearAllStyles();
+            applyWidthToChat(DEFAULT_WIDTH_PERCENT);
+            await browser.storage.local.set({ [STORAGE_KEY]: DEFAULT_WIDTH_PERCENT });
+            console.log(`[Claude Width] Toggled to default: ${DEFAULT_WIDTH_PERCENT}%`);
+            return DEFAULT_WIDTH_PERCENT;
+        }
+
+        return currentWidth;
     }
 
     // =========================================================================
@@ -252,15 +333,22 @@
      */
     function injectMinimalCSS() {
         let styleElement = document.getElementById(STYLE_ELEMENT_ID);
-        
+
         const css = `
             /*
-             * Claude Chat Width Customizer - Minimal CSS v1.5.1
+             * Claude Chat Width Customizer - Minimal CSS v1.6.0
              */
 
             /* Smooth transitions for styled elements */
             [${DATA_ATTR}] {
                 transition: max-width 0.2s ease-out, width 0.2s ease-out !important;
+            }
+
+            /* Respect reduced motion preference */
+            @media (prefers-reduced-motion: reduce) {
+                [${DATA_ATTR}] {
+                    transition: none !important;
+                }
             }
 
             /* Allow prose to fill container */
@@ -282,7 +370,7 @@
                 overflow-x: auto !important;
             }
         `;
-        
+
         if (styleElement) {
             styleElement.textContent = css;
         } else {
@@ -290,7 +378,7 @@
             styleElement.id = STYLE_ELEMENT_ID;
             styleElement.type = 'text/css';
             styleElement.textContent = css;
-            
+
             const head = document.head || document.getElementsByTagName('head')[0];
             if (head) {
                 head.appendChild(styleElement);
@@ -306,12 +394,12 @@
         try {
             const result = await browser.storage.local.get(STORAGE_KEY);
             const savedWidth = result[STORAGE_KEY];
-            
+
             if (typeof savedWidth === 'number' && savedWidth >= MIN_WIDTH_PERCENT && savedWidth <= MAX_WIDTH_PERCENT) {
                 console.log(`[Claude Width] Loaded preference: ${savedWidth}%`);
                 return savedWidth;
             }
-            
+
             console.log(`[Claude Width] No valid preference, using default: ${DEFAULT_WIDTH_PERCENT}%`);
             return DEFAULT_WIDTH_PERCENT;
         } catch (error) {
@@ -322,10 +410,10 @@
 
     function handleStorageChange(changes, areaName) {
         if (areaName !== 'local') return;
-        
+
         if (changes[STORAGE_KEY]) {
             const newWidth = changes[STORAGE_KEY].newValue;
-            
+
             if (typeof newWidth === 'number') {
                 console.log(`[Claude Width] Storage changed to: ${newWidth}%`);
                 // Force clear and reapply
@@ -343,10 +431,10 @@
         if (domObserver) {
             domObserver.disconnect();
         }
-        
+
         domObserver = new MutationObserver((mutations) => {
             let needsUpdate = false;
-            
+
             for (const mutation of mutations) {
                 if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
                     for (const node of mutation.addedNodes) {
@@ -358,14 +446,14 @@
                                 node.matches('[class*="Composer"]') ||
                                 node.matches('form')
                             );
-                            
+
                             const hasRelevantChild = node.querySelector && (
                                 node.querySelector('[class*="mx-auto"]') ||
                                 node.querySelector('[class*="Message"]') ||
                                 node.querySelector('[class*="Composer"]') ||
                                 node.querySelector('form')
                             );
-                            
+
                             if (isRelevant || hasRelevantChild) {
                                 needsUpdate = true;
                                 break;
@@ -375,22 +463,22 @@
                 }
                 if (needsUpdate) break;
             }
-            
+
             if (needsUpdate) {
                 applyWidthDebounced(currentWidth);
             }
-            
+
             // Ensure our style element exists
             if (!document.getElementById(STYLE_ELEMENT_ID)) {
                 injectMinimalCSS();
             }
         });
-        
+
         domObserver.observe(document.documentElement, {
             childList: true,
             subtree: true
         });
-        
+
         console.log('[Claude Width] DOM observer initialized');
     }
 
@@ -398,7 +486,7 @@
     // MESSAGE HANDLING
     // =========================================================================
 
-    function handleMessage(message, sender, sendResponse) {
+    function handleMessage(message, _sender, sendResponse) {
         switch (message.action) {
             case 'updateWidth':
                 if (typeof message.width === 'number') {
@@ -410,7 +498,7 @@
                     sendResponse({ success: false, error: 'Invalid width value' });
                 }
                 break;
-                
+
             case 'getStatus':
                 sendResponse({
                     success: true,
@@ -418,17 +506,28 @@
                     styledElementCount: styledElements.size
                 });
                 break;
-                
+
             case 'resetToDefault':
                 clearAllStyles();
                 applyWidthToChat(DEFAULT_WIDTH_PERCENT);
                 sendResponse({ success: true, currentWidth: DEFAULT_WIDTH_PERCENT });
                 break;
-                
+
+            case 'cyclePresets':
+                const newWidth = cycleToNextPreset();
+                sendResponse({ success: true, currentWidth: newWidth });
+                break;
+
+            case 'toggleDefault':
+                toggleDefault().then(width => {
+                    sendResponse({ success: true, currentWidth: width });
+                });
+                return true; // Async response
+
             default:
                 sendResponse({ success: false, error: 'Unknown action' });
         }
-        
+
         return true;
     }
 
@@ -437,28 +536,28 @@
     // =========================================================================
 
     async function initialize() {
-        console.log('[Claude Width] Initializing content script v1.5.1...');
-        
+        console.log('[Claude Width] Initializing content script v1.6.0...');
+
         try {
             // Load saved preference
             const savedWidth = await loadWidthPreference();
             currentWidth = savedWidth;
-            
+
             // Inject minimal CSS
             injectMinimalCSS();
-            
+
             // Apply initial styles with delays to catch lazy-loaded content
             setTimeout(() => applyWidthToChat(savedWidth), 100);
             setTimeout(() => applyWidthToChat(currentWidth), 500);
             setTimeout(() => applyWidthToChat(currentWidth), 1000);
             setTimeout(() => applyWidthToChat(currentWidth), 2000);
             setTimeout(() => applyWidthToChat(currentWidth), 3000);
-            
+
             // Set up listeners
             browser.storage.onChanged.addListener(handleStorageChange);
             browser.runtime.onMessage.addListener(handleMessage);
             setupDOMObserver();
-            
+
             console.log('[Claude Width] Content script initialized successfully');
         } catch (error) {
             console.error('[Claude Width] Initialization error:', error);

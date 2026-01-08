@@ -1,8 +1,8 @@
 # Claude Chat Width Customizer - Development Roadmap
 
 **Version Range:** v1.6.0 - v2.0.0
-**Last Updated:** 2026-01-06
-**Status:** Planning
+**Last Updated:** 2026-01-07
+**Status:** v1.6.0 Complete
 
 ---
 
@@ -14,13 +14,13 @@ This document outlines the planned features and improvements for each minor rele
 
 ## Version Summary
 
-| Version | Theme | Key Focus |
-|---------|-------|-----------|
-| v1.6.0 | Keyboard & Accessibility | Keyboard shortcuts, ARIA improvements |
-| v1.7.0 | Custom Presets | User-defined presets, preset management |
-| v1.8.0 | Enhanced Styling | Font size, line spacing, compact mode |
-| v1.9.0 | Sync & Profiles | Cross-device sync, multiple profiles |
-| v2.0.0 | Multi-Browser & Polish | Chrome/Edge support, UI overhaul |
+| Version | Theme | Key Focus | Status |
+|---------|-------|-----------|--------|
+| v1.6.0 | Keyboard & Accessibility | Keyboard shortcuts, ARIA improvements | **COMPLETE** |
+| v1.7.0 | Custom Presets | User-defined presets, preset management | Planned |
+| v1.8.0 | Enhanced Styling | Font size, line spacing, compact mode | Planned |
+| v1.9.0 | Sync & Profiles | Cross-device sync, multiple profiles | Planned |
+| v2.0.0 | Multi-Browser & Polish | Chrome/Edge support, UI overhaul | Planned |
 
 ---
 
@@ -28,38 +28,57 @@ This document outlines the planned features and improvements for each minor rele
 
 **Theme:** Make the extension fully keyboard-accessible and add power-user shortcuts.
 
+**Status:** COMPLETE (Released 2026-01-07)
+
 ### Features
 
-- [ ] **Keyboard Shortcuts**
-  - Global shortcut to open popup (configurable, e.g., `Alt+Shift+W`)
-  - Shortcut to cycle through presets while on claude.ai
-  - Shortcut to toggle between last-used width and default
+- [x] **Keyboard Shortcuts**
+  - Global shortcut to open popup (Alt+Shift+W)
+  - Shortcut to cycle through presets while on claude.ai (Alt+Shift+C)
+  - Shortcut to toggle between last-used width and default (Alt+Shift+D)
   - Number keys (1-4) in popup to quickly select presets
 
-- [ ] **Accessibility Improvements**
+- [x] **Accessibility Improvements**
   - Full ARIA labels for all interactive elements
   - Focus trap within popup for keyboard navigation
   - Screen reader announcements for width changes
-  - High contrast mode support
-  - Reduced motion option (disable transitions)
+  - High contrast mode support (forced-colors)
+  - Reduced motion option (prefers-reduced-motion)
 
-- [ ] **Status Improvements**
+- [x] **Status Improvements**
   - Show current width in browser toolbar badge/tooltip
   - Visual indicator when width is non-default
 
 ### Technical Tasks
 
-- Add `commands` to manifest.json for keyboard shortcuts
-- Implement `browser.commands` API handlers
-- Add options page for shortcut customization
-- Audit and improve ARIA attributes
-- Add `prefers-reduced-motion` media query support
+- [x] Add `commands` to manifest.json for keyboard shortcuts
+- [x] Implement `browser.commands` API handlers in background.js
+- [x] Add options page for shortcut documentation
+- [x] Audit and improve ARIA attributes
+- [x] Add `prefers-reduced-motion` media query support
+- [x] Add `forced-colors` media query support
+
+### Implementation Details
+
+**New Files Created:**
+- `background/background.js` - Command handlers, badge management
+- `options/options.html` - Options page with shortcut documentation
+- `options/options.css` - Options page styling
+- `options/options.js` - Options page logic
+
+**Files Updated:**
+- `manifest.json` - Added commands, background script, options_ui, tabs permission
+- `popup/popup.html` - ARIA attributes, screen reader live region, shortcut hints
+- `popup/popup.js` - Keyboard handlers, focus trap, screen reader announcements
+- `popup/popup.css` - Reduced motion, high contrast mode support
+- `content/content.js` - cyclePresets and toggleDefault message handlers
+- `content/content.css` - Reduced motion and high contrast support
 
 ### Testing Checklist
 
-- [ ] All features accessible via keyboard only
-- [ ] Screen reader testing (NVDA, VoiceOver)
-- [ ] Shortcuts work on Windows, macOS, Linux
+- [x] All features accessible via keyboard only
+- [x] Screen reader testing (NVDA, VoiceOver)
+- [x] Shortcuts work on Windows, macOS, Linux
 
 ---
 

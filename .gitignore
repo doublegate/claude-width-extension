@@ -6,6 +6,7 @@ web-ext-artifacts/
 
 # Claude Code settings (local only)
 .claude/
+CLAUDE.local.md
 
 # OS generated files
 .DS_Store

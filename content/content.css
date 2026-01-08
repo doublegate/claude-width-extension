@@ -1,22 +1,53 @@
 /**
  * Claude Chat Width Customizer - Base Content Styles
  * ===================================================
- * 
- * Version 1.5.1 - Minimal CSS
- * 
+ *
+ * Version 1.6.0 - Keyboard & Accessibility
+ *
  * The JavaScript content script handles all width adjustments using inline styles.
- * This CSS file only provides smooth transitions for elements that have been
- * explicitly marked by the JavaScript.
- * 
+ * This CSS file provides smooth transitions for elements that have been
+ * explicitly marked by the JavaScript, with accessibility support.
+ *
  * @author DoubleGate
- * @version 1.5.1
+ * @version 1.6.0
  */
 
-/* 
+/*
  * Smooth transition ONLY for elements marked by our extension.
  * The data-claude-width-applied attribute is added by JavaScript
  * after verifying the element is NOT in the sidebar.
  */
 [data-claude-width-applied] {
     transition: max-width 0.2s ease-out, width 0.2s ease-out;
+}
+
+/* =========================================================================
+   ACCESSIBILITY: Reduced Motion Support
+   ========================================================================= */
+
+/**
+ * Respect user's motion preferences.
+ * Users with vestibular disorders or motion sensitivity may have
+ * prefers-reduced-motion enabled in their OS settings.
+ */
+@media (prefers-reduced-motion: reduce) {
+    [data-claude-width-applied] {
+        transition: none !important;
+    }
+}
+
+/* =========================================================================
+   ACCESSIBILITY: High Contrast Mode Support
+   ========================================================================= */
+
+/**
+ * Support Windows High Contrast Mode (forced-colors).
+ * Ensures our styled elements remain visible and functional
+ * when users have high contrast themes enabled.
+ */
+@media (forced-colors: active) {
+    [data-claude-width-applied] {
+        /* Let system colors take precedence */
+        forced-color-adjust: auto;
+    }
 }

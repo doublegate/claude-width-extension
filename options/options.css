@@ -1,0 +1,449 @@
+/**
+ * Claude Chat Width Customizer - Options Page Styles
+ * ===================================================
+ *
+ * Styling for the extension options/settings page.
+ * Uses CSS custom properties for consistent theming.
+ *
+ * @author DoubleGate
+ * @version 1.6.0
+ */
+
+/* ===== CSS Custom Properties ===== */
+:root {
+    /* Colors */
+    --color-primary: #D97757;
+    --color-primary-hover: #C4684A;
+    --color-primary-light: rgba(217, 119, 87, 0.1);
+
+    --color-bg: #FAF9F7;
+    --color-bg-elevated: #FFFFFF;
+    --color-bg-hover: #F5F4F2;
+
+    --color-text: #1A1915;
+    --color-text-secondary: #6B6B6B;
+    --color-text-muted: #9A9A9A;
+
+    --color-border: #E5E4E1;
+    --color-border-strong: #D1D0CD;
+
+    /* Typography */
+    --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    --font-size-sm: 13px;
+    --font-size-base: 14px;
+    --font-size-lg: 16px;
+    --font-size-xl: 20px;
+
+    /* Spacing */
+    --space-xs: 4px;
+    --space-sm: 8px;
+    --space-md: 12px;
+    --space-lg: 16px;
+    --space-xl: 24px;
+    --space-2xl: 32px;
+
+    /* Border Radius */
+    --radius-sm: 4px;
+    --radius-md: 6px;
+    --radius-lg: 8px;
+
+    /* Transitions */
+    --transition-fast: 150ms ease;
+    --transition-base: 200ms ease;
+}
+
+/* ===== Dark Theme (via prefers-color-scheme) ===== */
+@media (prefers-color-scheme: dark) {
+    :root {
+        --color-primary: #E8957A;
+        --color-primary-hover: #D97757;
+        --color-primary-light: rgba(232, 149, 122, 0.15);
+
+        --color-bg: #1A1915;
+        --color-bg-elevated: #252420;
+        --color-bg-hover: #2E2D28;
+
+        --color-text: #F5F4F2;
+        --color-text-secondary: #A8A8A8;
+        --color-text-muted: #7A7A7A;
+
+        --color-border: #3A3935;
+        --color-border-strong: #4A4945;
+    }
+}
+
+/* ===== Reset & Base ===== */
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: var(--font-family);
+    font-size: var(--font-size-base);
+    line-height: 1.6;
+    color: var(--color-text);
+    background-color: var(--color-bg);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* ===== Options Container ===== */
+.options-container {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: var(--space-xl);
+}
+
+/* ===== Header ===== */
+.options-header {
+    padding-bottom: var(--space-xl);
+    margin-bottom: var(--space-xl);
+    border-bottom: 1px solid var(--color-border);
+}
+
+.header-content {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+}
+
+.logo-icon {
+    width: 32px;
+    height: 32px;
+    color: var(--color-primary);
+    flex-shrink: 0;
+}
+
+.header-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.header-text h1 {
+    font-size: var(--font-size-xl);
+    font-weight: 600;
+    color: var(--color-text);
+    letter-spacing: -0.01em;
+}
+
+.version {
+    font-size: var(--font-size-sm);
+    color: var(--color-text-muted);
+}
+
+/* ===== Main Content ===== */
+.options-main {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2xl);
+}
+
+/* ===== Sections ===== */
+.options-section {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-lg);
+}
+
+.options-section h2 {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    font-size: var(--font-size-lg);
+    font-weight: 600;
+    color: var(--color-text);
+}
+
+.section-icon {
+    width: 18px;
+    height: 18px;
+    color: var(--color-primary);
+    flex-shrink: 0;
+}
+
+.section-description {
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-sm);
+}
+
+/* ===== Shortcuts List ===== */
+.shortcuts-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+}
+
+.shortcut-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-md) var(--space-lg);
+    background-color: var(--color-bg-elevated);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    transition: border-color var(--transition-fast);
+}
+
+.shortcut-item:hover {
+    border-color: var(--color-border-strong);
+}
+
+.shortcut-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.shortcut-name {
+    font-weight: 500;
+    color: var(--color-text);
+}
+
+.shortcut-description {
+    font-size: var(--font-size-sm);
+    color: var(--color-text-muted);
+}
+
+.shortcut-keys {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+}
+
+kbd {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 24px;
+    height: 24px;
+    padding: 0 var(--space-sm);
+    font-family: inherit;
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+    color: var(--color-text);
+    background-color: var(--color-bg);
+    border: 1px solid var(--color-border-strong);
+    border-radius: var(--radius-sm);
+    box-shadow: 0 1px 0 var(--color-border-strong);
+}
+
+.key-separator {
+    font-size: var(--font-size-sm);
+    color: var(--color-text-muted);
+}
+
+/* Compact shortcuts list */
+.shortcuts-list.compact .shortcut-item {
+    padding: var(--space-sm) var(--space-md);
+}
+
+.shortcuts-list.compact .shortcut-name {
+    font-size: var(--font-size-sm);
+}
+
+/* ===== Shortcuts Note ===== */
+.shortcuts-note {
+    display: flex;
+    gap: var(--space-sm);
+    padding: var(--space-md);
+    background-color: var(--color-primary-light);
+    border-radius: var(--radius-md);
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-sm);
+}
+
+.shortcuts-note .note-icon {
+    width: 16px;
+    height: 16px;
+    color: var(--color-primary);
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.shortcuts-note strong {
+    color: var(--color-text);
+}
+
+/* ===== Buttons ===== */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-sm);
+    padding: var(--space-sm) var(--space-lg);
+    font-family: inherit;
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+    text-decoration: none;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.btn:focus {
+    outline: none;
+}
+
+.btn:focus-visible {
+    box-shadow: 0 0 0 3px var(--color-primary-light);
+}
+
+.btn-icon {
+    width: 16px;
+    height: 16px;
+}
+
+.btn-primary {
+    background-color: var(--color-primary);
+    color: white;
+    border: 1px solid var(--color-primary);
+}
+
+.btn-primary:hover {
+    background-color: var(--color-primary-hover);
+    border-color: var(--color-primary-hover);
+}
+
+.btn-primary:active {
+    transform: scale(0.98);
+}
+
+/* ===== Feature List ===== */
+.feature-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+}
+
+.feature-list li {
+    position: relative;
+    padding-left: var(--space-lg);
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-sm);
+}
+
+.feature-list li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 8px;
+    width: 6px;
+    height: 6px;
+    background-color: var(--color-primary);
+    border-radius: 50%;
+}
+
+.feature-list strong {
+    color: var(--color-text);
+    font-weight: 500;
+}
+
+/* ===== About Section ===== */
+.about-content {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-sm);
+}
+
+.about-content strong {
+    color: var(--color-text);
+}
+
+.about-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-md);
+}
+
+.link-external {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-xs);
+    padding: var(--space-sm) var(--space-md);
+    font-size: var(--font-size-sm);
+    color: var(--color-primary);
+    text-decoration: none;
+    background-color: var(--color-bg-elevated);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    transition: all var(--transition-fast);
+}
+
+.link-external:hover {
+    background-color: var(--color-bg-hover);
+    border-color: var(--color-border-strong);
+}
+
+.link-external:focus {
+    outline: none;
+}
+
+.link-external:focus-visible {
+    box-shadow: 0 0 0 3px var(--color-primary-light);
+}
+
+.link-icon {
+    width: 16px;
+    height: 16px;
+}
+
+/* ===== Footer ===== */
+.options-footer {
+    margin-top: var(--space-2xl);
+    padding-top: var(--space-xl);
+    border-top: 1px solid var(--color-border);
+    text-align: center;
+    font-size: var(--font-size-sm);
+    color: var(--color-text-muted);
+}
+
+.options-footer a {
+    color: var(--color-primary);
+    text-decoration: none;
+}
+
+.options-footer a:hover {
+    text-decoration: underline;
+}
+
+/* ===== Reduced Motion ===== */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        transition-duration: 0.01ms !important;
+        animation-duration: 0.01ms !important;
+    }
+}
+
+/* ===== High Contrast Mode ===== */
+@media (forced-colors: active) {
+    .btn-primary {
+        border: 2px solid ButtonText;
+    }
+
+    .shortcut-item {
+        border: 2px solid ButtonText;
+    }
+
+    kbd {
+        border: 2px solid ButtonText;
+    }
+
+    .link-external {
+        border: 2px solid LinkText;
+    }
+
+    .options-header,
+    .options-footer {
+        border-color: ButtonText;
+    }
+}
