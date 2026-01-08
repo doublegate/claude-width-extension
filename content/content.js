@@ -2,22 +2,21 @@
  * Claude Chat Width Customizer - Content Script
  * ==============================================
  *
- * VERSION 1.8.0 - Enhanced Styling
+ * VERSION 1.8.1 - Enhanced Styling Fix
  *
  * Injected into claude.ai pages to apply width customizations to the chat area.
  * Works with the background script to handle keyboard shortcuts for preset
  * cycling and default toggling.
  *
- * Changes from 1.7.0:
- * - Updated version to 1.8.0
- * - Changed default width from 70% to 85%
- * - Added typography controls (font size, line height, message padding)
- * - Added display modes (compact, comfortable, spacious, custom)
- * - Added code block enhancements (max-height, word wrap, collapse all)
- * - Added visual tweaks (timestamps, avatars, bubble style)
+ * Changes from 1.8.0:
+ * - Fixed real-time enhanced styling updates (applyEnhancedInlineStyles now called on setting changes)
+ * - Added comprehensive DOM selectors for claude.ai's Tailwind CSS structure
+ * - Added clearEnhancedInlineStyles for clean style re-application
+ * - Added applyEnhancedInlineStylesDebounced for MutationObserver efficiency
+ * - Enhanced MutationObserver to detect enhanced-styling-relevant elements
  *
  * @author DoubleGate
- * @version 1.8.0
+ * @version 1.8.1
  * @license MIT
  */
 
@@ -164,119 +163,252 @@
     // =========================================================================
 
     /**
+     * Selectors for message content (text that needs typography styles).
+     * These are the actual elements on claude.ai that contain text.
+     */
+    const MESSAGE_TEXT_SELECTORS = [
+        // Prose content (Claude's main text container)
+        '.prose',
+        '.prose p',
+        '.prose li',
+        '.prose span',
+        '.prose div',
+        '[class*="prose"]',
+        '[class*="prose"] p',
+        '[class*="prose"] li',
+        // Message containers
+        '[class*="Message"]',
+        '[class*="message"]',
+        '[class*="MessageContent"]',
+        '[class*="message-content"]',
+        // Generic text containers in chat
+        '[class*="ConversationMessage"]',
+        '[class*="conversation-message"]',
+        '[class*="ChatMessage"]',
+        '[class*="chat-message"]',
+        // Markdown rendered content
+        '[class*="Markdown"]',
+        '[class*="markdown"]',
+        '[class*="MarkdownContent"]',
+        // Response/human turn containers
+        '[class*="ResponseContent"]',
+        '[class*="HumanContent"]',
+        '[class*="AssistantContent"]',
+        '[class*="human-turn"]',
+        '[class*="assistant-turn"]'
+    ];
+
+    /**
+     * Selectors for message containers (elements that need padding/bubble styles).
+     */
+    const MESSAGE_CONTAINER_SELECTORS = [
+        '[class*="Message"]:not([class*="MessageList"])',
+        '[class*="message"]:not([class*="message-list"])',
+        '[class*="ConversationMessage"]',
+        '[class*="ChatMessage"]',
+        '[class*="turn-"]',
+        '[class*="Turn"]',
+        '[data-testid*="message"]',
+        '[data-testid*="turn"]'
+    ];
+
+    /**
+     * Selectors for avatar elements.
+     */
+    const AVATAR_SELECTORS = [
+        '[class*="avatar" i]',
+        '[class*="Avatar"]',
+        '[class*="profile-pic" i]',
+        '[class*="user-icon" i]',
+        '[class*="ProfileImage"]',
+        '[class*="UserIcon"]',
+        '[class*="ClaudeIcon"]',
+        '[class*="HumanIcon"]',
+        'img[alt*="avatar" i]',
+        'img[alt*="profile" i]',
+        '[data-testid*="avatar"]'
+    ];
+
+    /**
+     * Selectors for timestamp elements.
+     */
+    const TIMESTAMP_SELECTORS = [
+        '[class*="timestamp" i]',
+        '[class*="Timestamp"]',
+        'time',
+        '[datetime]',
+        '[class*="TimeAgo"]',
+        '[class*="time-ago"]',
+        '[class*="MessageTime"]',
+        '[class*="message-time"]',
+        '[data-testid*="timestamp"]',
+        '[data-testid*="time"]'
+    ];
+
+    /**
+     * Selectors for code blocks.
+     */
+    const CODE_BLOCK_SELECTORS = [
+        'pre',
+        'pre code',
+        '[class*="CodeBlock"]',
+        '[class*="code-block"]',
+        '[class*="codeblock"]',
+        '[class*="code-container"]',
+        '[class*="CodeContainer"]',
+        '[data-testid*="code-block"]'
+    ];
+
+    /**
      * Generate CSS for enhanced styling features.
+     * Uses broad selectors with high specificity to override Claude's styles.
      * @returns {string} CSS string
      */
     function generateEnhancedCSS() {
         const settings = enhancedSettings;
-        const fontSize = settings[ENHANCED_KEYS.FONT_SIZE];
-        const lineHeight = LINE_HEIGHT_VALUES[settings[ENHANCED_KEYS.LINE_HEIGHT]] || 1.5;
-        const messagePadding = MESSAGE_PADDING_VALUES[settings[ENHANCED_KEYS.MESSAGE_PADDING]] || 16;
-        const codeBlockHeight = settings[ENHANCED_KEYS.CODE_BLOCK_HEIGHT];
-        const codeBlockWrap = settings[ENHANCED_KEYS.CODE_BLOCK_WRAP];
-        const showTimestamps = settings[ENHANCED_KEYS.SHOW_TIMESTAMPS];
-        const showAvatars = settings[ENHANCED_KEYS.SHOW_AVATARS];
-        const bubbleStyle = settings[ENHANCED_KEYS.BUBBLE_STYLE];
+        const fontSizePercent = settings.fontSizePercent || ENHANCED_DEFAULTS.fontSizePercent;
+        const lineHeightValue = LINE_HEIGHT_VALUES[settings.lineHeight] || LINE_HEIGHT_VALUES.normal;
+        const messagePaddingValue = MESSAGE_PADDING_VALUES[settings.messagePadding] || MESSAGE_PADDING_VALUES.medium;
+        const codeBlockHeight = settings.codeBlockMaxHeight;
+        const codeBlockWrap = settings.codeBlockWordWrap;
+        const showTimestamps = settings.showTimestamps;
+        const showAvatars = settings.showAvatars;
+        const bubbleStyle = settings.messageBubbleStyle;
+
+        // Build comprehensive selector strings
+        const textSelectors = MESSAGE_TEXT_SELECTORS.join(',\n            ');
+        const containerSelectors = MESSAGE_CONTAINER_SELECTORS.join(',\n            ');
+        const avatarSelectors = AVATAR_SELECTORS.join(',\n            ');
+        const timestampSelectors = TIMESTAMP_SELECTORS.join(',\n            ');
+        const codeSelectors = CODE_BLOCK_SELECTORS.join(',\n            ');
 
         let css = `
             /* Claude Width Customizer - Enhanced Styling v1.8.0 */
+            /* These styles use !important to override Claude's React-generated styles */
 
-            /* Typography Controls */
-            [class*="Message"] p,
-            [class*="message"] p,
+            /* ========================================
+               TYPOGRAPHY CONTROLS
+               ======================================== */
+
+            /* Font size and line height for all text content */
+            ${textSelectors} {
+                font-size: ${fontSizePercent}% !important;
+                line-height: ${lineHeightValue} !important;
+            }
+
+            /* Ensure paragraphs inherit the styles */
             .prose p,
-            [class*="prose"] p {
-                font-size: ${fontSize}% !important;
-                line-height: ${lineHeight} !important;
+            [class*="prose"] p,
+            [class*="Message"] p,
+            [class*="message"] p {
+                font-size: inherit !important;
+                line-height: inherit !important;
             }
 
-            /* Message Padding */
-            [class*="Message"],
-            [class*="message"] {
-                padding: ${messagePadding}px !important;
+            /* ========================================
+               MESSAGE PADDING
+               ======================================== */
+
+            /* Apply padding to message containers */
+            ${containerSelectors} {
+                padding: ${messagePaddingValue}px !important;
             }
-        `;
 
-        // Code Block Max Height
-        if (codeBlockHeight > 0) {
-            css += `
-                pre, [class*="CodeBlock"], [class*="code-block"] {
-                    max-height: ${codeBlockHeight}px !important;
-                    overflow-y: auto !important;
-                }
-            `;
-        } else {
-            css += `
-                pre, [class*="CodeBlock"], [class*="code-block"] {
-                    max-height: none !important;
-                }
-            `;
-        }
+            /* ========================================
+               CODE BLOCK STYLING
+               ======================================== */
 
-        // Code Block Word Wrap
-        if (codeBlockWrap) {
-            css += `
-                pre, pre code, [class*="CodeBlock"] code {
-                    white-space: pre-wrap !important;
-                    word-wrap: break-word !important;
-                    overflow-wrap: break-word !important;
-                }
-            `;
-        }
+            /* Code block max height */
+            ${codeSelectors} {
+                ${codeBlockHeight > 0 ? `max-height: ${codeBlockHeight}px !important;` : 'max-height: none !important;'}
+                overflow-y: ${codeBlockHeight > 0 ? 'auto' : 'visible'} !important;
+            }
 
-        // Hide Timestamps
-        if (!showTimestamps) {
-            css += `
-                [class*="timestamp" i],
-                [class*="time" i]:not([class*="runtime"]):not([class*="realtime"]),
-                time,
-                [datetime] {
-                    display: none !important;
-                }
-            `;
-        }
+            /* Code block word wrap */
+            ${codeBlockWrap ? `
+            pre,
+            pre code,
+            [class*="CodeBlock"] code,
+            [class*="code-block"] code {
+                white-space: pre-wrap !important;
+                word-wrap: break-word !important;
+                overflow-wrap: break-word !important;
+                word-break: break-word !important;
+            }
+            ` : ''}
 
-        // Hide Avatars
-        if (!showAvatars) {
-            css += `
-                [class*="avatar" i],
-                [class*="Avatar" i],
-                [class*="profile-pic" i],
-                [class*="user-icon" i] {
-                    display: none !important;
-                }
-            `;
-        }
+            /* ========================================
+               TIMESTAMP VISIBILITY
+               ======================================== */
 
-        // Message Bubble Styles
-        if (bubbleStyle === 'square') {
-            css += `
-                [class*="Message"],
-                [class*="message"] {
-                    border-radius: 0 !important;
-                }
-            `;
-        } else if (bubbleStyle === 'minimal') {
-            css += `
-                [class*="Message"],
-                [class*="message"] {
-                    border-radius: 0 !important;
-                    background: transparent !important;
-                    border: none !important;
-                    box-shadow: none !important;
-                }
-            `;
-        }
-        // 'rounded' is the default, no extra CSS needed
+            ${!showTimestamps ? `
+            /* Hide timestamps */
+            ${timestampSelectors} {
+                display: none !important;
+                visibility: hidden !important;
+                width: 0 !important;
+                height: 0 !important;
+                overflow: hidden !important;
+            }
+            ` : ''}
 
-        // Reduced motion support
-        css += `
+            /* ========================================
+               AVATAR VISIBILITY
+               ======================================== */
+
+            ${!showAvatars ? `
+            /* Hide avatars */
+            ${avatarSelectors} {
+                display: none !important;
+                visibility: hidden !important;
+                width: 0 !important;
+                height: 0 !important;
+                overflow: hidden !important;
+            }
+            ` : ''}
+
+            /* ========================================
+               MESSAGE BUBBLE STYLES
+               ======================================== */
+
+            ${bubbleStyle === 'square' ? `
+            /* Square bubble style */
+            ${containerSelectors} {
+                border-radius: 0 !important;
+            }
+            ` : ''}
+
+            ${bubbleStyle === 'minimal' ? `
+            /* Minimal bubble style - no background or borders */
+            ${containerSelectors} {
+                border-radius: 0 !important;
+                background: transparent !important;
+                background-color: transparent !important;
+                border: none !important;
+                box-shadow: none !important;
+            }
+            ` : ''}
+
+            /* ========================================
+               ACCESSIBILITY
+               ======================================== */
+
+            /* Reduced motion support */
             @media (prefers-reduced-motion: reduce) {
-                [class*="Message"],
-                [class*="message"],
-                pre, [class*="CodeBlock"] {
+                ${containerSelectors},
+                ${codeSelectors} {
                     transition: none !important;
+                    animation: none !important;
                 }
+            }
+
+            /* ========================================
+               MARKER FOR STYLED ELEMENTS
+               ======================================== */
+
+            /* Mark elements that have been styled by this extension */
+            [data-claude-enhanced-applied] {
+                /* This attribute marks elements we've styled inline */
             }
         `;
 
@@ -304,7 +436,167 @@
             }
         }
 
+        // Also apply inline styles to existing elements for maximum specificity
+        applyEnhancedInlineStyles();
+
         console.log('[Claude Width] Enhanced CSS injected/updated');
+    }
+
+    /**
+     * Apply enhanced styling via inline styles for maximum specificity.
+     * This ensures styles override Claude's React-generated styles.
+     */
+    function applyEnhancedInlineStyles() {
+        const settings = enhancedSettings;
+        const fontSizePercent = settings.fontSizePercent || ENHANCED_DEFAULTS.fontSizePercent;
+        const lineHeightValue = LINE_HEIGHT_VALUES[settings.lineHeight] || LINE_HEIGHT_VALUES.normal;
+        const messagePaddingValue = MESSAGE_PADDING_VALUES[settings.messagePadding] || MESSAGE_PADDING_VALUES.medium;
+        const codeBlockHeight = settings.codeBlockMaxHeight;
+        const codeBlockWrap = settings.codeBlockWordWrap;
+        const showAvatars = settings.showAvatars;
+        const showTimestamps = settings.showTimestamps;
+        const bubbleStyle = settings.messageBubbleStyle;
+
+        let styledCount = 0;
+
+        // Apply typography styles to text elements
+        MESSAGE_TEXT_SELECTORS.forEach(selector => {
+            try {
+                document.querySelectorAll(selector).forEach(el => {
+                    if (isInsideSidebar(el)) return;
+                    el.style.setProperty('font-size', `${fontSizePercent}%`, 'important');
+                    el.style.setProperty('line-height', String(lineHeightValue), 'important');
+                    el.setAttribute('data-claude-enhanced-applied', 'true');
+                    styledCount++;
+                });
+            } catch (e) {
+                // Selector might be invalid
+            }
+        });
+
+        // Apply padding to message containers
+        MESSAGE_CONTAINER_SELECTORS.forEach(selector => {
+            try {
+                document.querySelectorAll(selector).forEach(el => {
+                    if (isInsideSidebar(el)) return;
+                    el.style.setProperty('padding', `${messagePaddingValue}px`, 'important');
+
+                    // Apply bubble style
+                    if (bubbleStyle === 'square') {
+                        el.style.setProperty('border-radius', '0', 'important');
+                    } else if (bubbleStyle === 'minimal') {
+                        el.style.setProperty('border-radius', '0', 'important');
+                        el.style.setProperty('background', 'transparent', 'important');
+                        el.style.setProperty('border', 'none', 'important');
+                        el.style.setProperty('box-shadow', 'none', 'important');
+                    }
+
+                    el.setAttribute('data-claude-enhanced-applied', 'true');
+                    styledCount++;
+                });
+            } catch (e) {
+                // Selector might be invalid
+            }
+        });
+
+        // Apply code block styles
+        CODE_BLOCK_SELECTORS.forEach(selector => {
+            try {
+                document.querySelectorAll(selector).forEach(el => {
+                    if (isInsideSidebar(el)) return;
+
+                    // Max height
+                    if (codeBlockHeight > 0) {
+                        el.style.setProperty('max-height', `${codeBlockHeight}px`, 'important');
+                        el.style.setProperty('overflow-y', 'auto', 'important');
+                    } else {
+                        el.style.setProperty('max-height', 'none', 'important');
+                    }
+
+                    // Word wrap
+                    if (codeBlockWrap) {
+                        el.style.setProperty('white-space', 'pre-wrap', 'important');
+                        el.style.setProperty('word-wrap', 'break-word', 'important');
+                        el.style.setProperty('overflow-wrap', 'break-word', 'important');
+                    }
+
+                    el.setAttribute('data-claude-enhanced-applied', 'true');
+                    styledCount++;
+                });
+            } catch (e) {
+                // Selector might be invalid
+            }
+        });
+
+        // Handle avatar visibility
+        if (!showAvatars) {
+            AVATAR_SELECTORS.forEach(selector => {
+                try {
+                    document.querySelectorAll(selector).forEach(el => {
+                        if (isInsideSidebar(el)) return;
+                        el.style.setProperty('display', 'none', 'important');
+                        el.setAttribute('data-claude-enhanced-applied', 'true');
+                        styledCount++;
+                    });
+                } catch (e) {
+                    // Selector might be invalid
+                }
+            });
+        }
+
+        // Handle timestamp visibility
+        if (!showTimestamps) {
+            TIMESTAMP_SELECTORS.forEach(selector => {
+                try {
+                    document.querySelectorAll(selector).forEach(el => {
+                        if (isInsideSidebar(el)) return;
+                        el.style.setProperty('display', 'none', 'important');
+                        el.setAttribute('data-claude-enhanced-applied', 'true');
+                        styledCount++;
+                    });
+                } catch (e) {
+                    // Selector might be invalid
+                }
+            });
+        }
+
+        console.log(`[Claude Width] Applied enhanced inline styles to ${styledCount} elements`);
+    }
+
+    /**
+     * Clear all enhanced inline styles.
+     */
+    function clearEnhancedInlineStyles() {
+        document.querySelectorAll('[data-claude-enhanced-applied]').forEach(el => {
+            // Remove style properties we set
+            el.style.removeProperty('font-size');
+            el.style.removeProperty('line-height');
+            el.style.removeProperty('padding');
+            el.style.removeProperty('border-radius');
+            el.style.removeProperty('background');
+            el.style.removeProperty('border');
+            el.style.removeProperty('box-shadow');
+            el.style.removeProperty('max-height');
+            el.style.removeProperty('overflow-y');
+            el.style.removeProperty('white-space');
+            el.style.removeProperty('word-wrap');
+            el.style.removeProperty('overflow-wrap');
+            el.style.removeProperty('display');
+            el.removeAttribute('data-claude-enhanced-applied');
+        });
+    }
+
+    /**
+     * Debounced version of applyEnhancedInlineStyles.
+     */
+    let enhancedStyleDebounceTimer = null;
+    function applyEnhancedInlineStylesDebounced() {
+        if (enhancedStyleDebounceTimer) {
+            clearTimeout(enhancedStyleDebounceTimer);
+        }
+        enhancedStyleDebounceTimer = setTimeout(() => {
+            applyEnhancedInlineStyles();
+        }, TIMING.DEBOUNCE_MS);
     }
 
     /**
@@ -334,33 +626,61 @@
      */
     function handleEnhancedSettingsChange(changes) {
         let needsUpdate = false;
+        let needsFullClear = false;
 
+        // Check which settings changed
         for (const key of Object.values(ENHANCED_KEYS)) {
-            if (changes[key]) {
-                enhancedSettings[key] = changes[key].newValue;
+            if (changes[key] !== undefined) {
+                const oldValue = enhancedSettings[key];
+                const newValue = changes[key].newValue;
+                enhancedSettings[key] = newValue;
                 needsUpdate = true;
+
+                // If we're re-enabling avatars or timestamps, we need to clear styles
+                // so the display:none gets removed
+                if (key === 'showAvatars' || key === 'showTimestamps') {
+                    if (newValue === true && oldValue === false) {
+                        needsFullClear = true;
+                    }
+                }
+
+                // If bubble style changed from minimal/square to rounded, clear first
+                if (key === 'messageBubbleStyle') {
+                    if (newValue === 'rounded' && (oldValue === 'minimal' || oldValue === 'square')) {
+                        needsFullClear = true;
+                    }
+                }
+
+                console.log(`[Claude Width] Enhanced setting changed: ${key} = ${newValue}`);
             }
         }
 
         if (needsUpdate) {
             // Apply display mode preset if changed
-            if (changes[ENHANCED_KEYS.DISPLAY_MODE]) {
-                const mode = changes[ENHANCED_KEYS.DISPLAY_MODE].newValue;
+            if (changes.displayMode) {
+                const mode = changes.displayMode.newValue;
                 if (mode !== 'custom' && DISPLAY_MODE_PRESETS[mode]) {
                     const preset = DISPLAY_MODE_PRESETS[mode];
-                    enhancedSettings[ENHANCED_KEYS.LINE_HEIGHT] = preset.lineHeight;
-                    enhancedSettings[ENHANCED_KEYS.MESSAGE_PADDING] = preset.messagePadding;
-                    enhancedSettings[ENHANCED_KEYS.FONT_SIZE] = preset.fontSize;
+                    enhancedSettings.lineHeight = preset.lineHeight;
+                    enhancedSettings.messagePadding = preset.messagePadding;
+                    enhancedSettings.fontSizePercent = preset.fontSize;
                 }
             }
 
             // Handle code blocks collapsed state
-            if (changes[ENHANCED_KEYS.CODE_BLOCKS_COLLAPSED]) {
-                const collapsed = changes[ENHANCED_KEYS.CODE_BLOCKS_COLLAPSED].newValue;
+            if (changes.codeBlocksCollapsed) {
+                const collapsed = changes.codeBlocksCollapsed.newValue;
                 toggleAllCodeBlocks(collapsed);
             }
 
+            // Clear existing styles if needed (when re-enabling features)
+            if (needsFullClear) {
+                clearEnhancedInlineStyles();
+            }
+
+            // Inject updated CSS and apply inline styles
             injectEnhancedCSS();
+            applyEnhancedInlineStyles();
             console.log('[Claude Width] Enhanced settings updated');
         }
     }
@@ -448,10 +768,19 @@
      */
     async function resetEnhancedStyles() {
         try {
+            // Clear existing inline styles first
+            clearEnhancedInlineStyles();
+
+            // Reset to defaults
             await browser.storage.local.set(ENHANCED_DEFAULTS);
             enhancedSettings = { ...ENHANCED_DEFAULTS };
+
+            // Re-inject CSS with default values
             injectEnhancedCSS();
+
+            // Expand all code blocks
             toggleAllCodeBlocks(false);
+
             console.log('[Claude Width] Enhanced styles reset to defaults');
         } catch (error) {
             console.error('[Claude Width] Error resetting enhanced styles:', error);
@@ -773,44 +1102,86 @@
         }
 
         domObserver = new MutationObserver((mutations) => {
-            let needsUpdate = false;
+            let needsWidthUpdate = false;
+            let needsEnhancedUpdate = false;
 
             for (const mutation of mutations) {
                 if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
                     for (const node of mutation.addedNodes) {
                         if (node.nodeType === Node.ELEMENT_NODE) {
-                            // Check if new element might need styling
-                            const isRelevant = node.matches && (
+                            // Check if new element might need width styling
+                            const isWidthRelevant = node.matches && (
                                 node.matches('[class*="mx-auto"]') ||
                                 node.matches('[class*="Message"]') ||
                                 node.matches('[class*="Composer"]') ||
                                 node.matches('form')
                             );
 
-                            const hasRelevantChild = node.querySelector && (
+                            const hasWidthRelevantChild = node.querySelector && (
                                 node.querySelector('[class*="mx-auto"]') ||
                                 node.querySelector('[class*="Message"]') ||
                                 node.querySelector('[class*="Composer"]') ||
                                 node.querySelector('form')
                             );
 
-                            if (isRelevant || hasRelevantChild) {
-                                needsUpdate = true;
+                            if (isWidthRelevant || hasWidthRelevantChild) {
+                                needsWidthUpdate = true;
+                            }
+
+                            // Check if new element might need enhanced styling
+                            const isEnhancedRelevant = node.matches && (
+                                node.matches('.prose') ||
+                                node.matches('[class*="prose"]') ||
+                                node.matches('[class*="Message"]') ||
+                                node.matches('[class*="message"]') ||
+                                node.matches('pre') ||
+                                node.matches('[class*="CodeBlock"]') ||
+                                node.matches('[class*="avatar" i]') ||
+                                node.matches('[class*="Avatar"]') ||
+                                node.matches('time') ||
+                                node.matches('[class*="timestamp" i]')
+                            );
+
+                            const hasEnhancedRelevantChild = node.querySelector && (
+                                node.querySelector('.prose') ||
+                                node.querySelector('[class*="prose"]') ||
+                                node.querySelector('[class*="Message"]') ||
+                                node.querySelector('pre') ||
+                                node.querySelector('[class*="CodeBlock"]') ||
+                                node.querySelector('[class*="avatar" i]') ||
+                                node.querySelector('[class*="Avatar"]') ||
+                                node.querySelector('time')
+                            );
+
+                            if (isEnhancedRelevant || hasEnhancedRelevantChild) {
+                                needsEnhancedUpdate = true;
+                            }
+
+                            // If both need updates, no need to continue checking
+                            if (needsWidthUpdate && needsEnhancedUpdate) {
                                 break;
                             }
                         }
                     }
                 }
-                if (needsUpdate) break;
+                if (needsWidthUpdate && needsEnhancedUpdate) break;
             }
 
-            if (needsUpdate) {
+            // Apply updates as needed
+            if (needsWidthUpdate) {
                 applyWidthDebounced(currentWidth);
             }
 
-            // Ensure our style element exists
+            if (needsEnhancedUpdate) {
+                applyEnhancedInlineStylesDebounced();
+            }
+
+            // Ensure our style elements exist
             if (!document.getElementById(STYLE_ELEMENT_ID)) {
                 injectMinimalCSS();
+            }
+            if (!document.getElementById(ENHANCED_STYLE_ID)) {
+                injectEnhancedCSS();
             }
         });
 
@@ -902,7 +1273,7 @@
     // =========================================================================
 
     async function initialize() {
-        console.log('[Claude Width] Initializing content script v1.8.0...');
+        console.log('[Claude Width] Initializing content script v1.8.1...');
 
         try {
             // Load saved width preference
@@ -920,7 +1291,11 @@
 
             // Apply initial styles with delays to catch lazy-loaded content
             TIMING.INIT_RETRY_INTERVALS.forEach((delay, index) => {
-                setTimeout(() => applyWidthToChat(index === 0 ? savedWidth : currentWidth), delay);
+                setTimeout(() => {
+                    applyWidthToChat(index === 0 ? savedWidth : currentWidth);
+                    // Also re-apply enhanced inline styles for lazy-loaded content
+                    applyEnhancedInlineStyles();
+                }, delay);
             });
 
             // Apply collapsed code blocks if enabled

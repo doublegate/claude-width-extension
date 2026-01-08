@@ -2,7 +2,7 @@
  * Claude Chat Width Customizer - Base Content Styles
  * ===================================================
  *
- * Version 1.8.0 - Enhanced Styling
+ * Version 1.8.1 - Enhanced Styling Fix
  *
  * The JavaScript content script handles all width adjustments using inline styles.
  * This CSS file provides smooth transitions for elements that have been
@@ -14,7 +14,7 @@
  * - Visual element transitions (opacity for show/hide)
  *
  * @author DoubleGate
- * @version 1.8.0
+ * @version 1.8.1
  */
 
 /*

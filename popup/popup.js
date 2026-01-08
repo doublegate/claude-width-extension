@@ -27,10 +27,11 @@
  * - Alt+Up/Down: Reorder custom presets
  *
  * @author DoubleGate
- * @version 1.8.0
+ * @version 1.8.1
  * @license MIT
  *
  * Changelog:
+ * - v1.8.1: Fixed real-time enhanced styling updates
  * - v1.8.0: Enhanced styling - typography, display modes, code blocks, visual tweaks, default 85%
  * - v1.7.0: Custom presets, drag-and-drop, favorites, recent widths, default 70%
  * - v1.6.0: Keyboard shortcuts, accessibility, badge

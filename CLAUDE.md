@@ -4,13 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Firefox extension (Manifest V2) that customizes the chat width on claude.ai. Allows users to adjust the main chat area from 40-100% width via a popup UI, without affecting the sidebar. Version 1.8.0 adds enhanced styling with typography controls (font size, line height, padding), display modes (compact, comfortable, spacious, custom), code block enhancements (max-height, word wrap, collapse all), and visual tweaks (timestamps, avatars, bubble styles).
+Firefox extension (Manifest V2) that customizes the chat width on claude.ai. Allows users to adjust the main chat area from 40-100% width via a popup UI, without affecting the sidebar. Version 1.8.1 fixes enhanced styling with real-time updates and comprehensive DOM targeting for typography controls (font size, line height, padding), display modes (compact, comfortable, spacious, custom), code block enhancements (max-height, word wrap, collapse all), and visual tweaks (timestamps, avatars, bubble styles).
 
 ## Build & Development
 
 ```bash
 # Build XPI package (from project root)
-zip -r build/claude-width-customizer-v1.8.0.xpi . -x "*.git*" -x "build/*" -x "*.DS_Store" -x "CLAUDE.md" -x ".claude/*" -x "docs/*" -x "images/*"
+zip -r build/claude-width-customizer-v1.8.1.xpi . -x "*.git*" -x "build/*" -x "*.DS_Store" -x "CLAUDE.md" -x ".claude/*" -x "docs/*" -x "images/*"
 
 # Development testing (no build step required)
 # 1. Open Firefox → about:debugging → This Firefox
@@ -256,6 +256,7 @@ When Claude updates their UI, selectors may break. Debug process:
 
 | Version | Date | Highlights |
 |---------|------|------------|
+| v1.8.1 | 2026-01-08 | Fixed real-time enhanced styling updates, comprehensive DOM selectors |
 | v1.8.0 | 2026-01-08 | Enhanced styling (typography, display modes, code blocks, visual tweaks), default 85%, grey badge |
 | v1.7.0 | 2026-01-08 | Custom presets (CRUD, drag-drop, favorites), context menu, recent widths, default 70% |
 | v1.6.0 | 2026-01-07 | Keyboard shortcuts, full accessibility, badge, options page |

@@ -47,7 +47,7 @@ A Firefox extension that allows you to customize the width of the text input/out
 cd claude-width-extension
 
 # Create the XPI file (ZIP with .xpi extension)
-zip -r build/claude-width-customizer-v1.8.0.xpi . -x "*.git*" -x "build/*" -x "*.DS_Store" -x "CLAUDE.md" -x ".claude/*" -x "docs/*" -x "images/*"
+zip -r build/claude-width-customizer-v1.8.1.xpi . -x "*.git*" -x "build/*" -x "*.DS_Store" -x "CLAUDE.md" -x ".claude/*" -x "docs/*" -x "images/*"
 ```
 
 ## Usage
@@ -210,6 +210,15 @@ MIT License - feel free to modify and distribute.
 DoubleGate - [GitHub](https://github.com/doublegate)
 
 ## Changelog
+
+### v1.8.1 (Enhanced Styling Fix)
+- **Fixed**: Real-time enhanced styling updates now work correctly
+- **Fixed**: Settings changes (typography, display mode, code blocks, etc.) apply immediately
+- **Technical**: Added applyEnhancedInlineStyles() call to handleEnhancedSettingsChange()
+- **Technical**: Added 60+ comprehensive DOM selectors for claude.ai's Tailwind CSS structure
+- **Technical**: Added clearEnhancedInlineStyles() for clean style re-application
+- **Technical**: Added applyEnhancedInlineStylesDebounced() for MutationObserver efficiency
+- **Technical**: Enhanced MutationObserver to detect enhanced-styling-relevant elements
 
 ### v1.8.0 (Enhanced Styling)
 - **New**: Advanced Styling section with collapsible panels
