@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "name": "Claude Chat Width Customizer",
-  "version": "1.6.0",
+  "version": "1.7.0",
   "content_security_policy": "script-src 'self'; object-src 'self'",
   "description": "Customize the width of text input/output boxes in Claude.AI chat sessions",
   "author": "DoubleGate",
@@ -15,7 +15,8 @@
   "permissions": [
     "storage",
     "activeTab",
-    "tabs"
+    "tabs",
+    "contextMenus"
   ],
 
   "commands": {
@@ -73,7 +74,7 @@
   "browser_specific_settings": {
     "gecko": {
       "id": "claude-width@lparobek.dev",
-      "strict_min_version": "109.0",
+      "strict_min_version": "142.0",
       "data_collection_permissions": {
         "required": ["none"]
       }

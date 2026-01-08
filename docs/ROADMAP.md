@@ -1,8 +1,8 @@
 # Claude Chat Width Customizer - Development Roadmap
 
 **Version Range:** v1.6.0 - v2.0.0
-**Last Updated:** 2026-01-07
-**Status:** v1.6.0 Complete
+**Last Updated:** 2026-01-08
+**Status:** v1.7.0 Complete
 
 ---
 
@@ -17,7 +17,7 @@ This document outlines the planned features and improvements for each minor rele
 | Version | Theme | Key Focus | Status |
 |---------|-------|-----------|--------|
 | v1.6.0 | Keyboard & Accessibility | Keyboard shortcuts, ARIA improvements | **COMPLETE** |
-| v1.7.0 | Custom Presets | User-defined presets, preset management | Planned |
+| v1.7.0 | Custom Presets | User-defined presets, preset management | **COMPLETE** |
 | v1.8.0 | Enhanced Styling | Font size, line spacing, compact mode | Planned |
 | v1.9.0 | Sync & Profiles | Cross-device sync, multiple profiles | Planned |
 | v2.0.0 | Multi-Browser & Polish | Chrome/Edge support, UI overhaul | Planned |
@@ -86,31 +86,33 @@ This document outlines the planned features and improvements for each minor rele
 
 **Theme:** Allow users to create, save, and manage their own width presets.
 
+**Status:** COMPLETE (Released 2026-01-08)
+
 ### Features
 
-- [ ] **Custom Preset Management**
+- [x] **Custom Preset Management**
   - "Save Current" button to create new preset from current width
   - Name custom presets (e.g., "Reading Mode", "Coding Review")
   - Edit/rename existing custom presets
   - Delete custom presets
   - Maximum of 8 custom presets (4 built-in + 4 user)
 
-- [ ] **Preset Organization**
+- [x] **Preset Organization**
   - Drag-and-drop reordering of presets
   - Show/hide built-in presets
   - "Favorites" marking for most-used presets
 
-- [ ] **Quick Access**
+- [x] **Quick Access**
   - Right-click context menu on claude.ai with preset list
   - Popup shows recently used widths
 
 ### Technical Tasks
 
-- Extend storage schema for custom presets
-- Implement preset CRUD operations
-- Add context menu via `browser.contextMenus` API
-- Design preset management UI in popup
-- Migration path for existing users (preserve settings)
+- [x] Extend storage schema for custom presets
+- [x] Implement preset CRUD operations
+- [x] Add context menu via `browser.contextMenus` API
+- [x] Design preset management UI in popup
+- [x] Migration path for existing users (preserve settings)
 
 ### Storage Schema
 
@@ -129,10 +131,27 @@ This document outlines the planned features and improvements for each minor rele
 
 ### Testing Checklist
 
-- [ ] Create, edit, delete presets
-- [ ] Presets persist across browser restart
-- [ ] Context menu appears on claude.ai only
-- [ ] Migration from v1.5.x/v1.6.x works correctly
+- [x] Create, edit, delete presets
+- [x] Presets persist across browser restart
+- [x] Context menu appears on claude.ai only
+- [x] Migration from v1.5.x/v1.6.x works correctly
+
+### Implementation Details
+
+**Files Updated:**
+- `manifest.json` - Added contextMenus permission, version bump to 1.7.0
+- `background/background.js` - Context menu system, migration infrastructure, recent widths tracking
+- `popup/popup.html` - Custom presets section, recently used section, edit modal
+- `popup/popup.js` - Preset CRUD, drag-and-drop, favorites, recent widths
+- `popup/popup.css` - Custom preset styles, drag states, modal, high contrast support
+- `content/content.js` - DEFAULT_WIDTH changed to 70%
+- `options/options.html` - Version update, 70% default reference
+
+**Key Changes:**
+- Default width changed from 60% to 70% across all files
+- New storage keys: customPresets, hiddenBuiltInPresets, recentWidths, migrationVersion
+- Context menu dynamically rebuilds when presets change
+- Keyboard accessibility: Alt+Arrow keys for reordering presets
 
 ---
 
@@ -395,7 +414,7 @@ For each version:
 
 ## Questions & Decisions Needed
 
-- [ ] **v1.7.0**: Maximum number of custom presets?
+- [x] **v1.7.0**: Maximum number of custom presets? **Answer: 4 custom + 4 built-in = 8 total**
 - [ ] **v1.8.0**: Should typography controls affect input area too?
 - [ ] **v1.9.0**: Should sync be opt-in or opt-out by default?
 - [ ] **v2.0.0**: TypeScript migration - worth the effort?

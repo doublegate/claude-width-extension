@@ -8,6 +8,9 @@
  * Features:
  * - Slider-based width selection with real-time preview
  * - Quick preset buttons for common width values
+ * - Custom preset management (create, edit, delete, reorder)
+ * - Favorites and drag-and-drop reordering
+ * - Recently used widths tracking
  * - Persistent storage of user preferences
  * - Live updates to all open claude.ai tabs
  * - Status indication showing if extension is active
@@ -19,12 +22,17 @@
  * - 2: Select Medium (70%)
  * - 3: Select Wide (85%)
  * - 4: Select Full (100%)
- * - R: Reset to default (60%)
+ * - R: Reset to default (70%)
  * - Escape: Close popup
+ * - Alt+Up/Down: Reorder custom presets
  *
  * @author DoubleGate
- * @version 1.6.0
+ * @version 1.7.0
  * @license MIT
+ *
+ * Changelog:
+ * - v1.7.0: Custom presets, drag-and-drop, favorites, recent widths, default 70%
+ * - v1.6.0: Keyboard shortcuts, accessibility, badge
  */
 
 (function() {
@@ -41,10 +49,10 @@
     const STORAGE_KEY = 'chatWidthPercent';
 
     /**
-     * Default width percentage.
+     * Default width percentage (changed from 60 to 70 in v1.7.0).
      * @type {number}
      */
-    const DEFAULT_WIDTH = 60;
+    const DEFAULT_WIDTH = 70;
 
     /**
      * Minimum allowed width.
@@ -57,6 +65,29 @@
      * @type {number}
      */
     const MAX_WIDTH = 100;
+
+    /**
+     * Maximum number of custom presets allowed.
+     * @type {number}
+     */
+    const MAX_CUSTOM_PRESETS = 4;
+
+    /**
+     * Maximum number of recent widths to track.
+     * @type {number}
+     */
+    const MAX_RECENT_WIDTHS = 3;
+
+    /**
+     * Built-in presets (not editable).
+     * @type {Array<{id: string, name: string, width: number}>}
+     */
+    const BUILT_IN_PRESETS = [
+        { id: 'narrow', name: 'Narrow', width: 50 },
+        { id: 'medium', name: 'Medium', width: 70 },
+        { id: 'wide', name: 'Wide', width: 85 },
+        { id: 'full', name: 'Full', width: 100 }
+    ];
 
     /**
      * Preset width configurations mapped by keyboard key.
@@ -168,21 +199,81 @@
      */
     let srAnnouncements;
 
+    /**
+     * Custom presets section container.
+     * @type {HTMLElement}
+     */
+    let customPresetsContainer;
+
+    /**
+     * Custom presets list.
+     * @type {HTMLElement}
+     */
+    let customPresetsList;
+
+    /**
+     * Save current button.
+     * @type {HTMLButtonElement}
+     */
+    let saveCurrentBtn;
+
+    /**
+     * New preset form.
+     * @type {HTMLElement}
+     */
+    let newPresetForm;
+
+    /**
+     * New preset name input.
+     * @type {HTMLInputElement}
+     */
+    let newPresetNameInput;
+
+    /**
+     * Edit modal overlay.
+     * @type {HTMLElement}
+     */
+    let editModal;
+
+    /**
+     * Edit preset name input.
+     * @type {HTMLInputElement}
+     */
+    let editPresetNameInput;
+
+    /**
+     * Edit preset width input.
+     * @type {HTMLInputElement}
+     */
+    let editPresetWidthInput;
+
+    /**
+     * Recently used container.
+     * @type {HTMLElement}
+     */
+    let recentlyUsedContainer;
+
+    /**
+     * Recently used list.
+     * @type {HTMLElement}
+     */
+    let recentlyUsedList;
+
     // =========================================================================
     // STATE
     // =========================================================================
 
     /**
-     * Currently selected width (not yet applied).
+     * Currently selected width (may differ from saved if user is previewing).
      * @type {number}
      */
     let selectedWidth = DEFAULT_WIDTH;
 
     /**
-     * Last saved/applied width.
+     * Last saved/applied width (used to detect unsaved changes).
      * @type {number}
      */
-    let _savedWidth = DEFAULT_WIDTH;
+    let savedWidth = DEFAULT_WIDTH;
 
     /**
      * Whether user is currently on a claude.ai tab.
@@ -201,6 +292,30 @@
      * @type {HTMLElement[]}
      */
     let focusableElements = [];
+
+    /**
+     * Custom presets array.
+     * @type {Array<{id: string, name: string, width: number, favorite: boolean, order: number}>}
+     */
+    let customPresets = [];
+
+    /**
+     * Recently used widths.
+     * @type {number[]}
+     */
+    let recentWidths = [];
+
+    /**
+     * Currently editing preset ID.
+     * @type {string|null}
+     */
+    let editingPresetId = null;
+
+    /**
+     * Current drag target element.
+     * @type {HTMLElement|null}
+     */
+    let dragTarget = null;
 
     // =========================================================================
     // INITIALIZATION
@@ -223,6 +338,22 @@
         themeButtons = document.querySelectorAll('.theme-btn');
         srAnnouncements = document.getElementById('srAnnouncements');
 
+        // Custom presets elements
+        customPresetsContainer = document.getElementById('customPresetsSection');
+        customPresetsList = document.getElementById('customPresetsList');
+        saveCurrentBtn = document.getElementById('saveCurrentBtn');
+        newPresetForm = document.getElementById('newPresetForm');
+        newPresetNameInput = document.getElementById('newPresetName');
+
+        // Edit modal elements
+        editModal = document.getElementById('editPresetModal');
+        editPresetNameInput = document.getElementById('editPresetName');
+        editPresetWidthInput = document.getElementById('editPresetWidth');
+
+        // Recently used elements
+        recentlyUsedContainer = document.getElementById('recentlyUsedSection');
+        recentlyUsedList = document.getElementById('recentlyUsedList');
+
         // Set up event listeners
         setupEventListeners();
 
@@ -232,6 +363,8 @@
         // Load saved preferences and check status
         loadSavedTheme();
         loadSavedPreference();
+        loadCustomPresets();
+        loadRecentWidths();
         checkClaudeTabStatus();
 
         // Set initial focus to slider after a brief delay
@@ -244,7 +377,7 @@
      * Cache all focusable elements for focus trap functionality.
      */
     function cacheFocusableElements() {
-        const selector = 'button, input, [tabindex]:not([tabindex="-1"]), details summary';
+        const selector = 'button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"]), details summary';
         focusableElements = Array.from(document.querySelectorAll(selector))
             .filter(el => !el.disabled && el.offsetParent !== null);
     }
@@ -283,6 +416,91 @@
 
         // Focus trap
         document.addEventListener('keydown', handleFocusTrap);
+
+        // Custom preset events
+        if (saveCurrentBtn) {
+            saveCurrentBtn.addEventListener('click', handleSaveCurrentClick);
+        }
+
+        // New preset form
+        const confirmNewPresetBtn = document.getElementById('confirmNewPreset');
+        const cancelNewPresetBtn = document.getElementById('cancelNewPreset');
+        if (confirmNewPresetBtn) {
+            confirmNewPresetBtn.addEventListener('click', handleConfirmNewPreset);
+        }
+        if (cancelNewPresetBtn) {
+            cancelNewPresetBtn.addEventListener('click', handleCancelNewPreset);
+        }
+        if (newPresetNameInput) {
+            newPresetNameInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleConfirmNewPreset();
+                } else if (e.key === 'Escape') {
+                    e.preventDefault();
+                    handleCancelNewPreset();
+                }
+            });
+        }
+
+        // Edit modal events
+        const saveEditBtn = document.getElementById('saveEditBtn');
+        const cancelEditBtn = document.getElementById('cancelEditBtn');
+        const deletePresetBtn = document.getElementById('deletePresetBtn');
+        if (saveEditBtn) {
+            saveEditBtn.addEventListener('click', handleSaveEdit);
+        }
+        if (cancelEditBtn) {
+            cancelEditBtn.addEventListener('click', handleCancelEdit);
+        }
+        if (deletePresetBtn) {
+            deletePresetBtn.addEventListener('click', handleDeletePreset);
+        }
+
+        // Modal backdrop click
+        if (editModal) {
+            editModal.addEventListener('click', (e) => {
+                if (e.target === editModal) {
+                    handleCancelEdit();
+                }
+            });
+        }
+
+        // Modal keyboard
+        if (editModal) {
+            editModal.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    handleCancelEdit();
+                }
+            });
+        }
+    }
+
+    // =========================================================================
+    // UTILITY FUNCTIONS
+    // =========================================================================
+
+    /**
+     * Generate a UUID for custom presets.
+     * @returns {string} A unique identifier
+     */
+    function generateUUID() {
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+            const r = Math.random() * 16 | 0;
+            const v = c === 'x' ? r : (r & 0x3 | 0x8);
+            return v.toString(16);
+        });
+    }
+
+    /**
+     * Escape HTML to prevent XSS.
+     * @param {string} text - Text to escape
+     * @returns {string} Escaped HTML string
+     */
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
     }
 
     // =========================================================================
@@ -300,6 +518,7 @@
         selectedWidth = value;
         updateDisplay(value);
         updatePresetHighlight(value);
+        updateUnsavedIndicator();
     }
 
     /**
@@ -421,12 +640,28 @@
      * @param {KeyboardEvent} event - The keydown event
      */
     function handleGlobalKeydown(event) {
-        // Don't handle if user is in a text input (shouldn't happen in this popup)
+        // Don't handle if modal is open
+        if (editModal && !editModal.hidden) {
+            return;
+        }
+
+        // Don't handle if user is in a text input
         if (event.target.tagName === 'INPUT' && event.target.type === 'text') {
             return;
         }
 
-        // Don't handle if modifier keys are pressed (except for shortcuts that use them)
+        // Alt + Arrow for reordering custom presets
+        if (event.altKey && (event.key === 'ArrowUp' || event.key === 'ArrowDown')) {
+            const focusedItem = document.activeElement.closest('.custom-preset-item');
+            if (focusedItem && focusedItem.dataset.id) {
+                event.preventDefault();
+                const direction = event.key === 'ArrowUp' ? -1 : 1;
+                reorderPreset(focusedItem.dataset.id, direction);
+                return;
+            }
+        }
+
+        // Don't handle other keys if modifier keys are pressed
         if (event.ctrlKey || event.altKey || event.metaKey) {
             return;
         }
@@ -463,6 +698,28 @@
     function handleFocusTrap(event) {
         if (event.key !== 'Tab') return;
 
+        // If modal is open, trap focus in modal
+        if (editModal && !editModal.hidden) {
+            const modalFocusable = editModal.querySelectorAll('button:not([disabled]), input:not([disabled])');
+            if (modalFocusable.length === 0) return;
+
+            const first = modalFocusable[0];
+            const last = modalFocusable[modalFocusable.length - 1];
+
+            if (event.shiftKey) {
+                if (document.activeElement === first) {
+                    event.preventDefault();
+                    last.focus();
+                }
+            } else {
+                if (document.activeElement === last) {
+                    event.preventDefault();
+                    first.focus();
+                }
+            }
+            return;
+        }
+
         const firstElement = focusableElements[0];
         const lastElement = focusableElements[focusableElements.length - 1];
 
@@ -497,6 +754,559 @@
             saveTheme(theme);
             announceChange(`Theme changed to ${THEME_NAMES[theme]}`);
         }
+    }
+
+    // =========================================================================
+    // CUSTOM PRESETS
+    // =========================================================================
+
+    /**
+     * Load custom presets from storage.
+     */
+    async function loadCustomPresets() {
+        try {
+            const result = await browser.storage.local.get('customPresets');
+            customPresets = result.customPresets || [];
+            renderCustomPresets();
+        } catch (error) {
+            console.error('[Claude Width Popup] Error loading custom presets:', error);
+            customPresets = [];
+            renderCustomPresets();
+        }
+    }
+
+    /**
+     * Save custom presets to storage.
+     */
+    async function saveCustomPresets() {
+        try {
+            await browser.storage.local.set({ customPresets: customPresets });
+            // Request context menu rebuild
+            try {
+                await browser.runtime.sendMessage({ action: 'rebuildContextMenu' });
+            } catch (e) {
+                // Background script might not be ready
+            }
+        } catch (error) {
+            console.error('[Claude Width Popup] Error saving custom presets:', error);
+        }
+    }
+
+    /**
+     * Render the custom presets list.
+     */
+    function renderCustomPresets() {
+        if (!customPresetsList) return;
+
+        // Clear existing list
+        customPresetsList.textContent = '';
+
+        // Sort by order
+        const sorted = [...customPresets].sort((a, b) => (a.order || 0) - (b.order || 0));
+
+        sorted.forEach((preset, index) => {
+            const item = createCustomPresetItem(preset, index);
+            customPresetsList.appendChild(item);
+        });
+
+        // Update save button visibility
+        if (saveCurrentBtn) {
+            saveCurrentBtn.disabled = customPresets.length >= MAX_CUSTOM_PRESETS;
+        }
+
+        // Update custom presets container visibility and empty state
+        if (customPresetsContainer) {
+            const hasPresets = customPresets.length > 0;
+            customPresetsContainer.classList.toggle('has-presets', hasPresets);
+            customPresetsContainer.classList.toggle('empty', !hasPresets);
+
+            // Update section header count
+            const headerCount = customPresetsContainer.querySelector('.preset-count');
+            if (headerCount) {
+                headerCount.textContent = `(${customPresets.length}/${MAX_CUSTOM_PRESETS})`;
+            }
+        }
+
+        // Update focusable elements cache
+        cacheFocusableElements();
+    }
+
+    /**
+     * Create a custom preset list item element using DOM methods.
+     *
+     * @param {Object} preset - The preset object
+     * @param {number} index - The index in the sorted array
+     * @returns {HTMLElement} The list item element
+     */
+    function createCustomPresetItem(preset, index) {
+        const item = document.createElement('div');
+        item.className = 'custom-preset-item';
+        item.dataset.id = preset.id;
+        item.dataset.index = String(index);
+        item.draggable = true;
+        item.setAttribute('aria-posinset', String(index + 1));
+        item.setAttribute('aria-setsize', String(customPresets.length));
+
+        // Drag handle
+        const dragHandle = document.createElement('button');
+        dragHandle.className = 'drag-handle';
+        dragHandle.type = 'button';
+        dragHandle.setAttribute('aria-label', `Reorder ${preset.name}, use Alt+Arrow keys`);
+        dragHandle.title = 'Drag to reorder';
+        dragHandle.tabIndex = 0;
+
+        const dragSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        dragSvg.setAttribute('viewBox', '0 0 16 16');
+        dragSvg.setAttribute('fill', 'currentColor');
+        dragSvg.setAttribute('aria-hidden', 'true');
+        const dragPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        dragPath.setAttribute('d', 'M2 4h12v1H2V4zm0 3.5h12v1H2v-1zm0 3.5h12v1H2v-1z');
+        dragSvg.appendChild(dragPath);
+        dragHandle.appendChild(dragSvg);
+
+        // Apply button
+        const applyBtn = document.createElement('button');
+        applyBtn.className = 'preset-apply-btn';
+        applyBtn.type = 'button';
+        applyBtn.setAttribute('aria-label', `Apply ${escapeHtml(preset.name)} preset (${preset.width}%)`);
+
+        const nameSpan = document.createElement('span');
+        nameSpan.className = 'preset-name';
+        nameSpan.textContent = preset.name;
+
+        const widthSpan = document.createElement('span');
+        widthSpan.className = 'preset-width';
+        widthSpan.textContent = `${preset.width}%`;
+
+        applyBtn.appendChild(nameSpan);
+        applyBtn.appendChild(widthSpan);
+
+        // Favorite button
+        const favBtn = document.createElement('button');
+        favBtn.className = 'favorite-btn' + (preset.favorite ? ' active' : '');
+        favBtn.type = 'button';
+        favBtn.setAttribute('aria-label', preset.favorite ? `Remove ${preset.name} from favorites` : `Add ${preset.name} to favorites`);
+        favBtn.setAttribute('aria-pressed', preset.favorite ? 'true' : 'false');
+        favBtn.title = preset.favorite ? 'Remove from favorites' : 'Add to favorites';
+
+        const starSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        starSvg.setAttribute('viewBox', '0 0 16 16');
+        starSvg.setAttribute('fill', 'currentColor');
+        starSvg.setAttribute('aria-hidden', 'true');
+        const starPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        starPath.setAttribute('d', preset.favorite
+            ? 'M8 .25a.75.75 0 01.673.418l1.882 3.815 4.21.612a.75.75 0 01.416 1.279l-3.046 2.97.719 4.192a.75.75 0 01-1.088.791L8 12.347l-3.766 1.98a.75.75 0 01-1.088-.79l.72-4.194L.818 6.374a.75.75 0 01.416-1.28l4.21-.611L7.327.668A.75.75 0 018 .25z'
+            : 'M8 .25a.75.75 0 01.673.418l1.882 3.815 4.21.612a.75.75 0 01.416 1.279l-3.046 2.97.719 4.192a.75.75 0 01-1.088.791L8 12.347l-3.766 1.98a.75.75 0 01-1.088-.79l.72-4.194L.818 6.374a.75.75 0 01.416-1.28l4.21-.611L7.327.668A.75.75 0 018 .25zm0 2.445L6.615 5.5a.75.75 0 01-.564.41l-3.097.45 2.24 2.184a.75.75 0 01.216.664l-.528 3.084 2.769-1.456a.75.75 0 01.698 0l2.77 1.456-.53-3.084a.75.75 0 01.216-.664l2.24-2.183-3.096-.45a.75.75 0 01-.564-.41L8 2.694z'
+        );
+        starSvg.appendChild(starPath);
+        favBtn.appendChild(starSvg);
+
+        // Edit button
+        const editBtn = document.createElement('button');
+        editBtn.className = 'edit-btn';
+        editBtn.type = 'button';
+        editBtn.setAttribute('aria-label', `Edit ${preset.name}`);
+        editBtn.title = 'Edit preset';
+
+        const editSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        editSvg.setAttribute('viewBox', '0 0 16 16');
+        editSvg.setAttribute('fill', 'currentColor');
+        editSvg.setAttribute('aria-hidden', 'true');
+        const editPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        editPath.setAttribute('d', 'M11.013 1.427a1.75 1.75 0 012.474 0l1.086 1.086a1.75 1.75 0 010 2.474l-8.61 8.61c-.21.21-.47.364-.756.445l-3.251.93a.75.75 0 01-.927-.928l.929-3.25a1.75 1.75 0 01.445-.758l8.61-8.61zm1.414 1.06a.25.25 0 00-.354 0L10.811 3.75l1.439 1.44 1.263-1.263a.25.25 0 000-.354l-1.086-1.086zM11.189 6.25L9.75 4.81l-6.286 6.287a.25.25 0 00-.064.108l-.558 1.953 1.953-.558a.25.25 0 00.108-.064l6.286-6.286z');
+        editSvg.appendChild(editPath);
+        editBtn.appendChild(editSvg);
+
+        // Append all elements
+        item.appendChild(dragHandle);
+        item.appendChild(applyBtn);
+        item.appendChild(favBtn);
+        item.appendChild(editBtn);
+
+        // Event listeners
+        applyBtn.addEventListener('click', () => handleApplyCustomPreset(preset));
+        favBtn.addEventListener('click', () => handleToggleFavorite(preset.id));
+        editBtn.addEventListener('click', () => openEditModal(preset));
+
+        // Drag events
+        item.addEventListener('dragstart', handleDragStart);
+        item.addEventListener('dragend', handleDragEnd);
+        item.addEventListener('dragover', handleDragOver);
+        item.addEventListener('drop', handleDrop);
+        item.addEventListener('dragleave', handleDragLeave);
+
+        return item;
+    }
+
+    /**
+     * Handle applying a custom preset.
+     *
+     * @param {Object} preset - The preset to apply
+     */
+    function handleApplyCustomPreset(preset) {
+        selectedWidth = preset.width;
+        sliderElement.value = preset.width;
+        updateDisplay(preset.width);
+        updatePresetHighlight(preset.width);
+        saveAndApplyWidth(preset.width);
+        announceChange(`${preset.name} preset applied, ${preset.width} percent width`);
+    }
+
+    /**
+     * Handle toggling favorite status.
+     *
+     * @param {string} presetId - The preset ID
+     */
+    function handleToggleFavorite(presetId) {
+        const preset = customPresets.find(p => p.id === presetId);
+        if (preset) {
+            preset.favorite = !preset.favorite;
+            saveCustomPresets();
+            renderCustomPresets();
+            announceChange(preset.favorite ? `${preset.name} added to favorites` : `${preset.name} removed from favorites`);
+        }
+    }
+
+    /**
+     * Handle save current width as preset button click.
+     */
+    function handleSaveCurrentClick() {
+        if (customPresets.length >= MAX_CUSTOM_PRESETS) {
+            announceChange('Maximum number of custom presets reached');
+            return;
+        }
+
+        if (newPresetForm) {
+            newPresetForm.hidden = false;
+            if (newPresetNameInput) {
+                newPresetNameInput.value = '';
+                newPresetNameInput.focus();
+            }
+        }
+    }
+
+    /**
+     * Handle confirming new preset creation.
+     */
+    function handleConfirmNewPreset() {
+        if (!newPresetNameInput) return;
+
+        const name = newPresetNameInput.value.trim();
+        if (!name) {
+            announceChange('Please enter a preset name');
+            newPresetNameInput.focus();
+            return;
+        }
+
+        // Create new preset
+        const newPreset = {
+            id: generateUUID(),
+            name: name,
+            width: selectedWidth,
+            favorite: false,
+            order: customPresets.length
+        };
+
+        customPresets.push(newPreset);
+        saveCustomPresets();
+        renderCustomPresets();
+
+        // Hide form
+        if (newPresetForm) {
+            newPresetForm.hidden = true;
+        }
+
+        announceChange(`Custom preset "${name}" created at ${selectedWidth} percent`);
+    }
+
+    /**
+     * Handle canceling new preset creation.
+     */
+    function handleCancelNewPreset() {
+        if (newPresetForm) {
+            newPresetForm.hidden = true;
+        }
+        if (newPresetNameInput) {
+            newPresetNameInput.value = '';
+        }
+    }
+
+    /**
+     * Open the edit modal for a preset.
+     *
+     * @param {Object} preset - The preset to edit
+     */
+    function openEditModal(preset) {
+        if (!editModal) return;
+
+        editingPresetId = preset.id;
+        if (editPresetNameInput) {
+            editPresetNameInput.value = preset.name;
+        }
+        if (editPresetWidthInput) {
+            editPresetWidthInput.value = preset.width;
+        }
+
+        editModal.hidden = false;
+        editPresetNameInput.focus();
+    }
+
+    /**
+     * Handle saving edit changes.
+     */
+    function handleSaveEdit() {
+        if (!editingPresetId || !editPresetNameInput || !editPresetWidthInput) return;
+
+        const preset = customPresets.find(p => p.id === editingPresetId);
+        if (!preset) return;
+
+        const newName = editPresetNameInput.value.trim();
+        const newWidth = parseInt(editPresetWidthInput.value, 10);
+
+        if (!newName) {
+            announceChange('Please enter a preset name');
+            editPresetNameInput.focus();
+            return;
+        }
+
+        if (isNaN(newWidth) || newWidth < MIN_WIDTH || newWidth > MAX_WIDTH) {
+            announceChange(`Width must be between ${MIN_WIDTH} and ${MAX_WIDTH}`);
+            editPresetWidthInput.focus();
+            return;
+        }
+
+        preset.name = newName;
+        preset.width = newWidth;
+        saveCustomPresets();
+        renderCustomPresets();
+
+        handleCancelEdit();
+        announceChange(`Preset updated to "${newName}" at ${newWidth} percent`);
+    }
+
+    /**
+     * Handle canceling edit.
+     */
+    function handleCancelEdit() {
+        if (editModal) {
+            editModal.hidden = true;
+        }
+        editingPresetId = null;
+    }
+
+    /**
+     * Handle deleting a preset.
+     */
+    function handleDeletePreset() {
+        if (!editingPresetId) return;
+
+        const preset = customPresets.find(p => p.id === editingPresetId);
+        const presetName = preset ? preset.name : 'Preset';
+
+        customPresets = customPresets.filter(p => p.id !== editingPresetId);
+
+        // Re-order remaining presets
+        customPresets.forEach((p, i) => {
+            p.order = i;
+        });
+
+        saveCustomPresets();
+        renderCustomPresets();
+
+        handleCancelEdit();
+        announceChange(`${presetName} deleted`);
+    }
+
+    /**
+     * Reorder a preset by direction.
+     *
+     * @param {string} presetId - The preset ID
+     * @param {number} direction - -1 for up, 1 for down
+     */
+    function reorderPreset(presetId, direction) {
+        const sorted = [...customPresets].sort((a, b) => (a.order || 0) - (b.order || 0));
+        const index = sorted.findIndex(p => p.id === presetId);
+
+        if (index === -1) return;
+
+        const newIndex = index + direction;
+        if (newIndex < 0 || newIndex >= sorted.length) return;
+
+        // Swap orders
+        const temp = sorted[index].order;
+        sorted[index].order = sorted[newIndex].order;
+        sorted[newIndex].order = temp;
+
+        saveCustomPresets();
+        renderCustomPresets();
+
+        // Re-focus the moved item
+        setTimeout(() => {
+            const movedItem = document.querySelector(`.custom-preset-item[data-id="${presetId}"]`);
+            if (movedItem) {
+                const dragHandle = movedItem.querySelector('.drag-handle');
+                if (dragHandle) {
+                    dragHandle.focus();
+                }
+            }
+        }, 50);
+
+        announceChange(`Preset moved ${direction < 0 ? 'up' : 'down'}`);
+    }
+
+    // =========================================================================
+    // DRAG AND DROP
+    // =========================================================================
+
+    /**
+     * Handle drag start.
+     *
+     * @param {DragEvent} event
+     */
+    function handleDragStart(event) {
+        const item = event.target.closest('.custom-preset-item');
+        if (!item) return;
+
+        dragTarget = item;
+        item.classList.add('dragging');
+        event.dataTransfer.effectAllowed = 'move';
+        event.dataTransfer.setData('text/plain', item.dataset.id);
+    }
+
+    /**
+     * Handle drag end.
+     *
+     * @param {DragEvent} event
+     */
+    function handleDragEnd(event) {
+        const item = event.target.closest('.custom-preset-item');
+        if (item) {
+            item.classList.remove('dragging');
+        }
+        dragTarget = null;
+
+        // Remove all drag-over states
+        document.querySelectorAll('.custom-preset-item.drag-over').forEach(el => {
+            el.classList.remove('drag-over');
+        });
+    }
+
+    /**
+     * Handle drag over.
+     *
+     * @param {DragEvent} event
+     */
+    function handleDragOver(event) {
+        event.preventDefault();
+        event.dataTransfer.dropEffect = 'move';
+
+        const item = event.target.closest('.custom-preset-item');
+        if (item && item !== dragTarget) {
+            // Remove drag-over from all items
+            document.querySelectorAll('.custom-preset-item.drag-over').forEach(el => {
+                el.classList.remove('drag-over');
+            });
+            item.classList.add('drag-over');
+        }
+    }
+
+    /**
+     * Handle drag leave.
+     *
+     * @param {DragEvent} event
+     */
+    function handleDragLeave(event) {
+        const item = event.target.closest('.custom-preset-item');
+        if (item) {
+            item.classList.remove('drag-over');
+        }
+    }
+
+    /**
+     * Handle drop.
+     *
+     * @param {DragEvent} event
+     */
+    function handleDrop(event) {
+        event.preventDefault();
+
+        const dropTarget = event.target.closest('.custom-preset-item');
+        if (!dropTarget || !dragTarget || dropTarget === dragTarget) return;
+
+        const dragId = dragTarget.dataset.id;
+        const dropId = dropTarget.dataset.id;
+
+        const dragPreset = customPresets.find(p => p.id === dragId);
+        const dropPreset = customPresets.find(p => p.id === dropId);
+
+        if (dragPreset && dropPreset) {
+            // Swap orders
+            const tempOrder = dragPreset.order;
+            dragPreset.order = dropPreset.order;
+            dropPreset.order = tempOrder;
+
+            saveCustomPresets();
+            renderCustomPresets();
+            announceChange('Preset order updated');
+        }
+
+        dropTarget.classList.remove('drag-over');
+    }
+
+    // =========================================================================
+    // RECENT WIDTHS
+    // =========================================================================
+
+    /**
+     * Load recent widths from storage.
+     */
+    async function loadRecentWidths() {
+        try {
+            const result = await browser.storage.local.get('recentWidths');
+            recentWidths = result.recentWidths || [];
+            renderRecentWidths();
+        } catch (error) {
+            console.error('[Claude Width Popup] Error loading recent widths:', error);
+            recentWidths = [];
+        }
+    }
+
+    /**
+     * Render the recently used widths.
+     */
+    function renderRecentWidths() {
+        if (!recentlyUsedList || !recentlyUsedContainer) return;
+
+        // Filter out widths that match built-in or custom presets
+        const presetWidths = [...BUILT_IN_PRESETS.map(p => p.width), ...customPresets.map(p => p.width)];
+        const uniqueRecent = recentWidths.filter(w => !presetWidths.includes(w));
+
+        if (uniqueRecent.length === 0) {
+            recentlyUsedContainer.hidden = true;
+            return;
+        }
+
+        recentlyUsedContainer.hidden = false;
+        recentlyUsedList.textContent = '';
+
+        uniqueRecent.slice(0, MAX_RECENT_WIDTHS).forEach(width => {
+            const btn = document.createElement('button');
+            btn.className = 'recent-width-btn';
+            btn.type = 'button';
+            btn.setAttribute('aria-label', `Apply ${width}% width`);
+            btn.textContent = `${width}%`;
+            btn.addEventListener('click', () => {
+                selectedWidth = width;
+                sliderElement.value = width;
+                updateDisplay(width);
+                updatePresetHighlight(width);
+                saveAndApplyWidth(width);
+                announceChange(`Width set to ${width} percent`);
+            });
+            recentlyUsedList.appendChild(btn);
+        });
+
+        cacheFocusableElements();
     }
 
     // =========================================================================
@@ -563,6 +1373,34 @@
                 nonDefaultIndicator.hidden = false;
             } else {
                 nonDefaultIndicator.hidden = true;
+            }
+        }
+    }
+
+    /**
+     * Update the unsaved changes indicator.
+     * Shows visual feedback when slider value differs from saved value.
+     */
+    function updateUnsavedIndicator() {
+        const hasUnsavedChanges = selectedWidth !== savedWidth;
+
+        // Update Apply button to indicate pending changes
+        if (applyButton) {
+            if (hasUnsavedChanges) {
+                applyButton.classList.add('has-changes');
+                applyButton.setAttribute('aria-label', `Apply pending change to ${selectedWidth} percent`);
+            } else {
+                applyButton.classList.remove('has-changes');
+                applyButton.setAttribute('aria-label', 'Apply current width setting');
+            }
+        }
+
+        // Update width display to indicate preview state
+        if (widthValueElement) {
+            if (hasUnsavedChanges) {
+                widthValueElement.classList.add('previewing');
+            } else {
+                widthValueElement.classList.remove('previewing');
             }
         }
     }
@@ -707,17 +1545,18 @@
             const stored = result[STORAGE_KEY];
 
             if (typeof stored === 'number' && stored >= MIN_WIDTH && stored <= MAX_WIDTH) {
-                _savedWidth = stored;
                 selectedWidth = stored;
+                savedWidth = stored;
             } else {
-                _savedWidth = DEFAULT_WIDTH;
                 selectedWidth = DEFAULT_WIDTH;
+                savedWidth = DEFAULT_WIDTH;
             }
 
             // Update UI with loaded value
             sliderElement.value = selectedWidth;
             updateDisplay(selectedWidth);
             updatePresetHighlight(selectedWidth);
+            updateUnsavedIndicator();
 
         } catch (error) {
             console.error('[Claude Width Popup] Error loading preference:', error);
@@ -736,20 +1575,25 @@
         try {
             // Save to storage
             await browser.storage.local.set({ [STORAGE_KEY]: width });
-            _savedWidth = width;
+            savedWidth = width;
+            updateUnsavedIndicator();
 
             console.log(`[Claude Width Popup] Saved width: ${width}%`);
 
             // Notify all claude.ai tabs
             notifyClaudeTabs(width);
 
-            // Request badge update from background script
+            // Request badge update and recent widths from background script
             try {
                 await browser.runtime.sendMessage({ action: 'updateBadge' });
+                await browser.runtime.sendMessage({ action: 'addRecentWidth', width: width });
             } catch (e) {
                 // Background script might not be ready
-                console.log('[Claude Width Popup] Could not update badge');
+                console.log('[Claude Width Popup] Could not update badge or recent widths');
             }
+
+            // Reload recent widths display
+            loadRecentWidths();
 
         } catch (error) {
             console.error('[Claude Width Popup] Error saving preference:', error);

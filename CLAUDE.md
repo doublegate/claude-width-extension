@@ -4,13 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Firefox extension (Manifest V2) that customizes the chat width on claude.ai. Allows users to adjust the main chat area from 40-100% width via a popup UI, without affecting the sidebar. Version 1.6.0 adds keyboard shortcuts and full accessibility support.
+Firefox extension (Manifest V2) that customizes the chat width on claude.ai. Allows users to adjust the main chat area from 40-100% width via a popup UI, without affecting the sidebar. Version 1.7.0 adds custom preset management with drag-and-drop reordering, favorites, right-click context menu, and recently used widths tracking.
 
 ## Build & Development
 
 ```bash
 # Build XPI package (from project root)
-zip -r build/claude-width-customizer-v1.6.0.xpi . -x "*.git*" -x "build/*" -x "*.DS_Store" -x "CLAUDE.md" -x ".claude/*" -x "docs/*"
+zip -r build/claude-width-customizer-v1.7.0.xpi . -x "*.git*" -x "build/*" -x "*.DS_Store" -x "CLAUDE.md" -x ".claude/*" -x "docs/*"
 
 # Development testing (no build step required)
 # 1. Open Firefox → about:debugging → This Firefox
@@ -22,7 +22,7 @@ No npm/node dependencies. Pure vanilla JavaScript.
 
 ## Architecture
 
-### Communication Flow (v1.6.0)
+### Communication Flow (v1.7.0)
 
 ```
                             browser.commands API
@@ -31,17 +31,18 @@ No npm/node dependencies. Pure vanilla JavaScript.
                             background.js ─────────────────┐
                                     │                      │
                                     │ tabs.sendMessage()   │ browserAction.setBadge()
+                                    │                      │ contextMenus API
                                     ▼                      ▼
-popup.js ──storage.local.set()──> browser.storage      Badge/Tooltip
+popup.js ──storage.local.set()──> browser.storage      Badge/Context Menu
     │                                   │
     │                                   ├── onChanged listener
     │                                   ▼
     └──tabs.sendMessage()──────> content.js ──inline styles──> DOM
 ```
 
-1. **Background Script** (`background/background.js`): Handles global keyboard shortcuts (Alt+Shift+W/C/D), manages toolbar badge, processes commands
-2. **Popup** (`popup/popup.js`): User changes width via slider/presets, local keyboard shortcuts (1-4, R, Esc)
-3. **Storage**: Preference saved to `browser.storage.local` with key `chatWidthPercent`
+1. **Background Script** (`background/background.js`): Handles global keyboard shortcuts (Alt+Shift+W/C/D), manages toolbar badge, context menu, migration, recent widths
+2. **Popup** (`popup/popup.js`): Width slider/presets, custom preset CRUD, drag-and-drop, favorites, local keyboard shortcuts (1-4, R, Esc)
+3. **Storage**: Preferences saved to `browser.storage.local` with keys: `chatWidthPercent`, `customPresets`, `hiddenBuiltInPresets`, `recentWidths`, `migrationVersion`
 4. **Content Script** (`content/content.js`): Receives updates via:
    - `browser.storage.onChanged` listener (triggers on storage change)
    - `browser.runtime.onMessage` listener (direct messages from popup/background)
@@ -68,7 +69,7 @@ The extension must NOT affect sidebar elements. `isInsideSidebar()` walks up the
 
 | Constant | Value | Location |
 |----------|-------|----------|
-| `DEFAULT_WIDTH_PERCENT` | 60 | content.js, background.js |
+| `DEFAULT_WIDTH_PERCENT` | 70 | content.js, background.js, popup.js |
 | `MIN_WIDTH_PERCENT` | 40 | content.js |
 | `MAX_WIDTH_PERCENT` | 100 | content.js |
 | `PRESET_CYCLE` | `[50, 70, 85, 100]` | content.js, background.js |
@@ -78,6 +79,9 @@ The extension must NOT affect sidebar elements. `isInsideSidebar()` walks up the
 | `DEFAULT_THEME` | `system` | popup.js |
 | `VALID_THEMES` | `['light', 'dark', 'system']` | popup.js |
 | `BADGE_COLOR` | `#D97757` | background.js |
+| `MAX_CUSTOM_PRESETS` | 4 | popup.js |
+| `MAX_RECENT_WIDTHS` | 3 | popup.js, background.js |
+| `CURRENT_MIGRATION_VERSION` | 1 | background.js |
 
 ## Keyboard Shortcuts
 
@@ -97,9 +101,10 @@ The extension must NOT affect sidebar elements. `isInsideSidebar()` walks up the
 | 2 | Medium preset (70%) |
 | 3 | Wide preset (85%) |
 | 4 | Full width (100%) |
-| R | Reset to default (60%) |
+| R | Reset to default (70%) |
 | Escape | Close popup |
 | Tab | Focus trap navigation |
+| Alt+Up/Down | Reorder custom presets |
 
 Shortcuts are customizable via `about:addons` > gear icon > "Manage Extension Shortcuts"
 
@@ -146,24 +151,38 @@ Theme is applied by setting `data-theme` attribute on `<html>` element.
 ### Screen Reader Announcements
 Width changes are announced via the `#srAnnouncements` live region element using a text-clearing technique to ensure re-announcement of repeated values.
 
+## Context Menu (v1.7.0)
+
+Right-click on any claude.ai page to access the width context menu:
+
+- **Built-in Presets**: Narrow (50%), Medium (70%), Wide (85%), Full (100%)
+- **Custom Presets**: User-created presets with favorites marked with star
+- **Default (70%)**: Reset to default width
+- **Recently Used**: Last 3 non-preset widths used
+
+The context menu rebuilds dynamically when:
+- Custom presets are added/edited/deleted
+- Presets are favorited/unfavorited
+- New widths are used via slider
+
 ## File Structure
 
 ```
 claude-width-extension/
-├── manifest.json              # Extension manifest (Manifest V2, v1.6.0)
+├── manifest.json              # Extension manifest (Manifest V2, v1.7.0)
 ├── README.md                  # User documentation
 ├── CONTRIBUTING.md            # Contribution guidelines
 ├── LICENSE                    # MIT license
 ├── .gitignore                 # Git exclusions
 ├── background/
-│   └── background.js          # Global keyboard shortcuts, badge management
+│   └── background.js          # Keyboard shortcuts, badge, context menu, migration
 ├── content/
 │   ├── content.js             # Main content script (DOM manipulation)
 │   └── content.css            # Transition styles, reduced motion
 ├── popup/
-│   ├── popup.html             # Extension popup UI
-│   ├── popup.css              # Popup styling (themes, a11y)
-│   └── popup.js               # Popup logic (keyboard, focus trap)
+│   ├── popup.html             # Extension popup UI with custom presets
+│   ├── popup.css              # Popup styling (themes, drag-drop, modal)
+│   └── popup.js               # Popup logic (presets CRUD, drag-drop, favorites)
 ├── options/
 │   ├── options.html           # Keyboard shortcuts documentation
 │   ├── options.css            # Options page styling
@@ -192,6 +211,7 @@ When Claude updates their UI, selectors may break. Debug process:
 
 | Version | Date | Highlights |
 |---------|------|------------|
+| v1.7.0 | 2026-01-08 | Custom presets (CRUD, drag-drop, favorites), context menu, recent widths, default 70% |
 | v1.6.0 | 2026-01-07 | Keyboard shortcuts, full accessibility, badge, options page |
 | v1.5.1 | 2026-01-06 | Mozilla Add-ons `data_collection_permissions` compliance |
 | v1.5.0 | 2026-01-06 | Light/Dark/System themes, CSP, safe DOM manipulation |

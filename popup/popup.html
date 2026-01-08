@@ -11,6 +11,8 @@
   - Real-time preview of changes
   - Visual percentage display
   - Quick preset buttons for common widths
+  - Custom preset management (create, edit, delete, favorites)
+  - Recently used widths
   - Reset to default option
   - Full keyboard accessibility
   - Screen reader support
@@ -20,12 +22,12 @@
   - 2: Select Medium (70%)
   - 3: Select Wide (85%)
   - 4: Select Full (100%)
-  - R: Reset to default (60%)
+  - R: Reset to default (70%)
   - Escape: Close popup
   - Tab: Navigate between controls
 
   @author DoubleGate
-  @version 1.6.0
+  @version 1.7.0
 -->
 <html lang="en">
 <head>
@@ -49,14 +51,14 @@
                 </svg>
                 <h1 class="popup-title" id="popupTitle">Claude.AI Chat Width</h1>
             </div>
-            <span class="version-badge" aria-label="Version 1.6.0">v1.6.0</span>
+            <span class="version-badge" aria-label="Version 1.7.0">v1.7.0</span>
         </header>
 
         <!-- Status Indicator -->
         <div class="status-bar" id="statusBar" role="status" aria-live="polite">
             <span class="status-dot" id="statusDot" aria-hidden="true"></span>
             <span class="status-text" id="statusText">Checking...</span>
-            <span class="non-default-indicator" id="nonDefaultIndicator" aria-label="Width differs from default" title="Width differs from default (60%)" hidden>
+            <span class="non-default-indicator" id="nonDefaultIndicator" aria-label="Width differs from default" title="Width differs from default (70%)" hidden>
                 <svg viewBox="0 0 8 8" fill="currentColor" aria-hidden="true">
                     <circle cx="4" cy="4" r="4"/>
                 </svg>
@@ -109,7 +111,7 @@
         <main class="popup-main" aria-labelledby="popupTitle">
             <!-- Width Display -->
             <div class="width-display" aria-hidden="true">
-                <span class="width-value" id="widthValue">60</span>
+                <span class="width-value" id="widthValue">70</span>
                 <span class="width-unit">%</span>
             </div>
 
@@ -125,14 +127,14 @@
                     class="width-slider"
                     min="40"
                     max="100"
-                    value="60"
+                    value="70"
                     step="5"
                     aria-label="Chat width percentage"
                     aria-describedby="sliderDescription"
                     aria-valuemin="40"
                     aria-valuemax="100"
-                    aria-valuenow="60"
-                    aria-valuetext="60 percent"
+                    aria-valuenow="70"
+                    aria-valuetext="70 percent"
                 >
                 <div class="slider-labels" aria-hidden="true">
                     <span>40%</span>
@@ -141,7 +143,7 @@
                 </div>
             </div>
 
-            <!-- Preset Buttons -->
+            <!-- Built-in Preset Buttons -->
             <div class="presets-section">
                 <span class="presets-label" id="presetsLabel">Quick Presets</span>
                 <span id="presetsDescription" class="sr-only">
@@ -150,6 +152,7 @@
                 <div class="presets-grid" role="group" aria-labelledby="presetsLabel" aria-describedby="presetsDescription">
                     <button class="preset-btn"
                             data-width="50"
+                            data-preset-id="narrow"
                             title="Narrow width (50%)"
                             aria-label="Narrow preset, 50 percent width. Press 1 for shortcut."
                             aria-pressed="false">
@@ -159,6 +162,7 @@
                     </button>
                     <button class="preset-btn"
                             data-width="70"
+                            data-preset-id="medium"
                             title="Medium width (70%)"
                             aria-label="Medium preset, 70 percent width. Press 2 for shortcut."
                             aria-pressed="false">
@@ -168,6 +172,7 @@
                     </button>
                     <button class="preset-btn"
                             data-width="85"
+                            data-preset-id="wide"
                             title="Wide width (85%)"
                             aria-label="Wide preset, 85 percent width. Press 3 for shortcut."
                             aria-pressed="false">
@@ -177,6 +182,7 @@
                     </button>
                     <button class="preset-btn"
                             data-width="100"
+                            data-preset-id="full"
                             title="Full width (100%)"
                             aria-label="Full width preset, 100 percent width. Press 4 for shortcut."
                             aria-pressed="false">
@@ -184,6 +190,56 @@
                         <span>Full</span>
                         <span class="preset-shortcut" aria-hidden="true">4</span>
                     </button>
+                </div>
+            </div>
+
+            <!-- Custom Presets Section -->
+            <div class="custom-presets-section" id="customPresetsSection">
+                <div class="custom-presets-header">
+                    <span class="custom-presets-label" id="customPresetsLabel">Custom Presets <span class="preset-count">(0/4)</span></span>
+                    <button class="save-current-btn"
+                            id="saveCurrentBtn"
+                            title="Save current width as a custom preset"
+                            aria-label="Save current width as a new custom preset">
+                        <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                            <path d="M8 3V13M3 8H13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                        Save Current
+                    </button>
+                </div>
+
+                <!-- Custom Presets List -->
+                <div class="custom-presets-list" id="customPresetsList" role="list" aria-labelledby="customPresetsLabel">
+                    <!-- Custom presets will be rendered here dynamically -->
+                </div>
+
+                <!-- New Preset Form (hidden by default) -->
+                <div class="new-preset-form" id="newPresetForm" hidden>
+                    <input type="text"
+                           id="newPresetName"
+                           class="preset-name-input"
+                           placeholder="Preset name (e.g., Reading Mode)"
+                           maxlength="20"
+                           aria-label="New preset name">
+                    <div class="form-actions">
+                        <button class="btn btn-small btn-secondary" id="cancelNewPreset" aria-label="Cancel creating preset">
+                            Cancel
+                        </button>
+                        <button class="btn btn-small btn-primary" id="confirmNewPreset" aria-label="Confirm and save preset">
+                            Save
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recently Used Section -->
+            <div class="recent-section" id="recentSection">
+                <span class="presets-label" id="recentLabel">Recently Used</span>
+                <div class="recent-widths" id="recentWidths" role="group" aria-labelledby="recentLabel">
+                    <!-- Recent widths will be rendered here dynamically -->
+                    <div class="empty-recent-message" id="emptyRecentMessage">
+                        No recent widths yet.
+                    </div>
                 </div>
             </div>
 
@@ -201,8 +257,8 @@
         <footer class="popup-footer">
             <button class="btn btn-secondary"
                     id="resetBtn"
-                    title="Reset to default (60%). Press R for shortcut."
-                    aria-label="Reset to default 60 percent width. Press R for shortcut.">
+                    title="Reset to default (70%). Press R for shortcut."
+                    aria-label="Reset to default 70 percent width. Press R for shortcut.">
                 <svg class="btn-icon" viewBox="0 0 16 16" fill="none" aria-hidden="true">
                     <path d="M2 8C2 4.68629 4.68629 2 8 2C10.0503 2 11.8764 2.98939 13 4.51472V2.5H14V6.5H10V5.5H12.2678C11.3049 4.01099 9.75932 3 8 3C5.23858 3 3 5.23858 3 8C3 10.7614 5.23858 13 8 13C10.0902 13 11.8829 11.6736 12.6177 9.80036L13.5545 10.1996C12.6555 12.4888 10.5073 14 8 14C4.68629 14 2 11.3137 2 8Z" fill="currentColor"/>
                 </svg>
@@ -235,9 +291,40 @@
                         <strong>Keyboard shortcuts:</strong> 1-4 for presets, R to reset, Esc to close.
                         <br>
                         <strong>Global shortcuts:</strong> Alt+Shift+W (open), Alt+Shift+C (cycle), Alt+Shift+D (toggle).
+                        <br>
+                        <strong>Context menu:</strong> Right-click on claude.ai for quick access to presets.
                     </p>
                 </div>
             </details>
+        </div>
+
+        <!-- Edit Preset Modal (hidden by default) -->
+        <div class="modal-overlay" id="editPresetModal" hidden>
+            <div class="modal" role="dialog" aria-labelledby="editModalTitle" aria-modal="true">
+                <h2 class="modal-title" id="editModalTitle">Edit Preset</h2>
+                <div class="modal-body">
+                    <label for="editPresetName" class="modal-label">Preset Name</label>
+                    <input type="text"
+                           id="editPresetName"
+                           class="preset-name-input"
+                           maxlength="20"
+                           aria-describedby="editNameHint">
+                    <span id="editNameHint" class="input-hint">Max 20 characters</span>
+                </div>
+                <div class="modal-actions">
+                    <button class="btn btn-small btn-danger" id="deletePresetBtn" aria-label="Delete this preset">
+                        Delete
+                    </button>
+                    <div class="modal-actions-right">
+                        <button class="btn btn-small btn-secondary" id="cancelEditPreset" aria-label="Cancel editing">
+                            Cancel
+                        </button>
+                        <button class="btn btn-small btn-primary" id="saveEditPreset" aria-label="Save changes">
+                            Save
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 

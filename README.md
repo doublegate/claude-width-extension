@@ -8,12 +8,15 @@ A Firefox extension that allows you to customize the width of the text input/out
 
 - **Adjustable Width**: Set chat width from 40% to 100% of the viewport
 - **Quick Presets**: One-click buttons for Narrow (50%), Medium (70%), Wide (85%), and Full (100%) widths
+- **Custom Presets**: Create up to 4 custom presets with your favorite widths, drag-and-drop reordering, and favorites marking
+- **Context Menu**: Right-click on claude.ai pages to quickly access all presets
+- **Recently Used**: Quick access to your last 3 used widths
 - **Keyboard Shortcuts**: Global shortcuts for power users (Alt+Shift+W/C/D), popup shortcuts (1-4, R, Esc)
 - **Full Accessibility**: ARIA labels, focus management, screen reader announcements, reduced motion support
 - **Real-time Preview**: See changes instantly as you adjust the slider
 - **Theme Support**: Light, Dark, and System theme modes for the extension popup
 - **Toolbar Badge**: Current width percentage displayed in the browser toolbar icon
-- **Persistent Settings**: Your preferences (width and theme) are saved and applied to all Claude sessions
+- **Persistent Settings**: Your preferences (width, theme, custom presets) are saved and applied to all Claude sessions
 - **Main Window Only**: Modifies only the main chat area, leaving the sidebar untouched
 - **SPA Compatible**: Works seamlessly with Claude's single-page application navigation
 - **Security Hardened**: Content Security Policy (CSP) enforced, no unsafe DOM operations
@@ -43,7 +46,7 @@ A Firefox extension that allows you to customize the width of the text input/out
 cd claude-width-extension
 
 # Create the XPI file (ZIP with .xpi extension)
-zip -r build/claude-width-customizer-v1.6.0.xpi . -x "*.git*" -x "build/*" -x "*.DS_Store" -x "CLAUDE.md" -x ".claude/*" -x "docs/*"
+zip -r build/claude-width-customizer-v1.7.0.xpi . -x "*.git*" -x "build/*" -x "*.DS_Store" -x "CLAUDE.md" -x ".claude/*" -x "docs/*"
 ```
 
 ## Usage
@@ -63,8 +66,28 @@ zip -r build/claude-width-customizer-v1.6.0.xpi . -x "*.git*" -x "build/*" -x "*
 | **Medium** | Sets width to 70% |
 | **Wide** | Sets width to 85% |
 | **Full** | Sets width to 100% |
-| **Reset** | Returns to default 60% width |
+| **Save Current** | Save current width as a custom preset |
+| **Reset** | Returns to default 70% width |
 | **Apply** | Manually saves and applies current setting |
+
+### Custom Presets
+
+Create your own presets for quick access to your preferred widths:
+
+1. Adjust the slider to your desired width
+2. Click **"Save Current"** in the Custom Presets section
+3. Enter a name (e.g., "Reading Mode", "Code Review")
+4. Click **Save** to create the preset
+
+**Preset Management:**
+- **Edit**: Click the edit button to rename or change the width
+- **Delete**: Remove presets you no longer need
+- **Reorder**: Drag presets or use Alt+Arrow keys to reorder
+- **Favorite**: Star your most-used presets for quick access
+
+### Context Menu
+
+Right-click anywhere on claude.ai pages to access the **Claude Width** context menu with all your presets.
 
 ### Keyboard Shortcuts
 
@@ -74,7 +97,7 @@ zip -r build/claude-width-customizer-v1.6.0.xpi . -x "*.git*" -x "build/*" -x "*
 |----------|--------|
 | `Alt+Shift+W` | Open extension popup |
 | `Alt+Shift+C` | Cycle through presets (50% -> 70% -> 85% -> 100% -> 50%...) |
-| `Alt+Shift+D` | Toggle between current width and default (60%) |
+| `Alt+Shift+D` | Toggle between current width and default (70%) |
 
 **Popup Shortcuts** (when popup is open):
 
@@ -87,6 +110,7 @@ zip -r build/claude-width-customizer-v1.6.0.xpi . -x "*.git*" -x "build/*" -x "*
 | `R` | Reset to default |
 | `Escape` | Close popup |
 | `Tab` | Navigate between controls |
+| `Alt+Up/Down` | Reorder custom presets |
 
 Note: Global shortcuts can be customized via `about:addons` > gear icon > "Manage Extension Shortcuts"
 
@@ -182,6 +206,18 @@ MIT License - feel free to modify and distribute.
 DoubleGate - [GitHub](https://github.com/doublegate)
 
 ## Changelog
+
+### v1.7.0 (Custom Presets)
+- **New**: Create up to 4 custom presets with custom names and widths
+- **New**: Drag-and-drop reordering of custom presets (or use Alt+Arrow keys)
+- **New**: Favorites marking - star your most-used presets
+- **New**: Right-click context menu on claude.ai with all presets
+- **New**: Recently used widths section (last 3 non-preset widths)
+- **New**: Unsaved changes indicator - visual feedback when slider differs from saved value
+- **Changed**: Default width changed from 60% to 70%
+- **Technical**: Added `contextMenus` permission for right-click menu
+- **Technical**: Migration system preserves existing user settings on upgrade
+- **Technical**: New storage keys: `customPresets`, `recentWidths`, `migrationVersion`
 
 ### v1.6.0 (Keyboard & Accessibility)
 - **New**: Global keyboard shortcuts (Alt+Shift+W/C/D) for popup, preset cycling, and toggle

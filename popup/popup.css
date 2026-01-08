@@ -24,7 +24,11 @@
  * - Visible focus indicators for keyboard navigation
  *
  * @author DoubleGate
- * @version 1.6.0
+ * @version 1.7.0
+ *
+ * Changelog:
+ * - v1.7.0: Custom presets, drag-drop, favorites, recently used, edit modal
+ * - v1.6.0: Accessibility improvements, themes
  */
 
 /* ===== CSS Custom Properties ===== */
@@ -48,6 +52,7 @@
     --color-success: #22C55E;
     --color-warning: #EAB308;
     --color-error: #EF4444;
+    --color-favorite: #F59E0B;
 
     --color-focus: rgba(217, 119, 87, 0.5);
 
@@ -75,6 +80,7 @@
     /* Shadows */
     --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
     --shadow-md: 0 2px 4px rgba(0, 0, 0, 0.08);
+    --shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.15);
 
     /* Transitions */
     --transition-fast: 150ms ease;
@@ -105,6 +111,7 @@
 
     --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.2);
     --shadow-md: 0 2px 4px rgba(0, 0, 0, 0.3);
+    --shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.4);
 }
 
 /* ===== System Theme (respects prefers-color-scheme) ===== */
@@ -129,6 +136,7 @@
 
         --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.2);
         --shadow-md: 0 2px 4px rgba(0, 0, 0, 0.3);
+        --shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.4);
     }
 }
 
@@ -166,7 +174,7 @@ body {
 
 /* ===== Popup Container ===== */
 .popup-container {
-    width: 280px;
+    width: 300px;
     padding: var(--space-lg);
     display: flex;
     flex-direction: column;
@@ -353,6 +361,21 @@ body {
     transform: scale(1.05);
 }
 
+/* Preview state when slider differs from saved */
+.width-value.previewing {
+    color: var(--color-text-secondary);
+    position: relative;
+}
+
+.width-value.previewing::after {
+    content: '*';
+    color: var(--color-primary);
+    font-size: 0.6em;
+    position: absolute;
+    top: -2px;
+    margin-left: 2px;
+}
+
 .width-unit {
     font-size: var(--font-size-lg);
     font-weight: 500;
@@ -375,8 +398,8 @@ body {
     background: linear-gradient(
         to right,
         var(--color-primary) 0%,
-        var(--color-primary) var(--slider-progress, 33%),
-        var(--color-border-strong) var(--slider-progress, 33%),
+        var(--color-primary) var(--slider-progress, 50%),
+        var(--color-border-strong) var(--slider-progress, 50%),
         var(--color-border-strong) 100%
     );
     cursor: pointer;
@@ -538,6 +561,410 @@ body {
     color: var(--color-primary);
 }
 
+/* ===== Custom Presets Section ===== */
+.custom-presets-section {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+    padding-top: var(--space-sm);
+    border-top: 1px solid var(--color-border);
+}
+
+/* Empty state - collapsed when no presets */
+.custom-presets-section.empty .custom-presets-list {
+    display: none;
+}
+
+/* Preset count badge */
+.preset-count {
+    font-size: var(--font-size-xs);
+    color: var(--color-text-muted);
+    font-weight: 400;
+    margin-left: var(--space-xs);
+}
+
+.custom-presets-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.custom-presets-label {
+    font-size: var(--font-size-xs);
+    font-weight: 500;
+    color: var(--color-text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.save-current-btn {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    padding: var(--space-xs) var(--space-sm);
+    background: transparent;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-family: inherit;
+    font-size: var(--font-size-xs);
+    color: var(--color-text-secondary);
+    transition: all var(--transition-fast);
+}
+
+.save-current-btn:hover:not(:disabled) {
+    background-color: var(--color-primary-light);
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+}
+
+.save-current-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.save-current-btn:focus {
+    outline: none;
+}
+
+.save-current-btn:focus-visible {
+    box-shadow: var(--focus-ring);
+}
+
+.save-current-btn svg {
+    width: 12px;
+    height: 12px;
+}
+
+/* Custom presets list */
+.custom-presets-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+}
+
+.custom-preset-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    padding: var(--space-xs);
+    background-color: var(--color-bg-elevated);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    transition: all var(--transition-fast);
+}
+
+.custom-preset-item:hover {
+    border-color: var(--color-border-strong);
+}
+
+.custom-preset-item.dragging {
+    opacity: 0.5;
+    border-style: dashed;
+}
+
+.custom-preset-item.drag-over {
+    border-color: var(--color-primary);
+    background-color: var(--color-primary-light);
+}
+
+/* Drag handle */
+.drag-handle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    background: transparent;
+    border: none;
+    border-radius: var(--radius-sm);
+    cursor: grab;
+    color: var(--color-text-muted);
+    transition: all var(--transition-fast);
+    flex-shrink: 0;
+}
+
+.drag-handle:hover {
+    background-color: var(--color-bg-hover);
+    color: var(--color-text-secondary);
+}
+
+.drag-handle:active {
+    cursor: grabbing;
+}
+
+.drag-handle:focus {
+    outline: none;
+}
+
+.drag-handle:focus-visible {
+    box-shadow: var(--focus-ring);
+}
+
+.drag-handle svg {
+    width: 14px;
+    height: 14px;
+}
+
+/* Preset apply button */
+.preset-apply-btn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-xs) var(--space-sm);
+    background: transparent;
+    border: none;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-family: inherit;
+    transition: all var(--transition-fast);
+    min-width: 0;
+}
+
+.preset-apply-btn:hover {
+    background-color: var(--color-bg-hover);
+}
+
+.preset-apply-btn:focus {
+    outline: none;
+}
+
+.preset-apply-btn:focus-visible {
+    box-shadow: var(--focus-ring);
+}
+
+.preset-name {
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+    color: var(--color-text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.preset-width {
+    font-size: var(--font-size-xs);
+    color: var(--color-text-muted);
+    flex-shrink: 0;
+    margin-left: var(--space-sm);
+}
+
+/* Favorite button */
+.favorite-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    background: transparent;
+    border: none;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    color: var(--color-text-muted);
+    transition: all var(--transition-fast);
+    flex-shrink: 0;
+}
+
+.favorite-btn:hover {
+    color: var(--color-favorite);
+}
+
+.favorite-btn.active {
+    color: var(--color-favorite);
+}
+
+.favorite-btn:focus {
+    outline: none;
+}
+
+.favorite-btn:focus-visible {
+    box-shadow: var(--focus-ring);
+}
+
+.favorite-btn svg {
+    width: 14px;
+    height: 14px;
+}
+
+/* Edit button */
+.edit-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    background: transparent;
+    border: none;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    color: var(--color-text-muted);
+    transition: all var(--transition-fast);
+    flex-shrink: 0;
+}
+
+.edit-btn:hover {
+    background-color: var(--color-bg-hover);
+    color: var(--color-text-secondary);
+}
+
+.edit-btn:focus {
+    outline: none;
+}
+
+.edit-btn:focus-visible {
+    box-shadow: var(--focus-ring);
+}
+
+.edit-btn svg {
+    width: 14px;
+    height: 14px;
+}
+
+/* New preset form */
+.new-preset-form {
+    display: flex;
+    gap: var(--space-xs);
+    padding: var(--space-sm);
+    background-color: var(--color-bg-elevated);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+}
+
+.new-preset-form[hidden] {
+    display: none;
+}
+
+.new-preset-input {
+    flex: 1;
+    padding: var(--space-xs) var(--space-sm);
+    background-color: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    font-family: inherit;
+    font-size: var(--font-size-sm);
+    color: var(--color-text);
+    transition: all var(--transition-fast);
+}
+
+.new-preset-input:hover {
+    border-color: var(--color-border-strong);
+}
+
+.new-preset-input:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: var(--focus-ring);
+}
+
+.new-preset-input::placeholder {
+    color: var(--color-text-muted);
+}
+
+.form-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    background: transparent;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.form-btn:focus {
+    outline: none;
+}
+
+.form-btn:focus-visible {
+    box-shadow: var(--focus-ring);
+}
+
+.form-btn svg {
+    width: 14px;
+    height: 14px;
+}
+
+.form-btn-confirm {
+    color: var(--color-success);
+}
+
+.form-btn-confirm:hover {
+    background-color: var(--color-success);
+    border-color: var(--color-success);
+    color: white;
+}
+
+.form-btn-cancel {
+    color: var(--color-text-muted);
+}
+
+.form-btn-cancel:hover {
+    background-color: var(--color-bg-hover);
+    color: var(--color-text-secondary);
+}
+
+/* Empty state */
+.custom-presets-empty {
+    padding: var(--space-md);
+    text-align: center;
+    color: var(--color-text-muted);
+    font-size: var(--font-size-xs);
+}
+
+/* ===== Recently Used Section ===== */
+.recently-used-section {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+}
+
+.recently-used-section[hidden] {
+    display: none;
+}
+
+.recently-used-label {
+    font-size: var(--font-size-xs);
+    font-weight: 500;
+    color: var(--color-text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.recently-used-list {
+    display: flex;
+    gap: var(--space-xs);
+    flex-wrap: wrap;
+}
+
+.recent-width-btn {
+    padding: var(--space-xs) var(--space-sm);
+    background-color: var(--color-bg-elevated);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-family: inherit;
+    font-size: var(--font-size-xs);
+    color: var(--color-text-secondary);
+    transition: all var(--transition-fast);
+}
+
+.recent-width-btn:hover {
+    background-color: var(--color-primary-light);
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+}
+
+.recent-width-btn:focus {
+    outline: none;
+}
+
+.recent-width-btn:focus-visible {
+    box-shadow: var(--focus-ring);
+}
+
 /* ===== Preview ===== */
 .preview-section {
     display: flex;
@@ -623,6 +1050,17 @@ body {
     transform: scale(0.98);
 }
 
+/* Apply button pending changes state */
+.btn-primary.has-changes {
+    animation: pulse-subtle 1.5s ease-in-out infinite;
+    box-shadow: 0 0 0 2px var(--color-primary-light);
+}
+
+@keyframes pulse-subtle {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.85; }
+}
+
 .btn-secondary {
     background-color: var(--color-bg-elevated);
     color: var(--color-text-secondary);
@@ -636,6 +1074,140 @@ body {
 
 .btn-secondary:active {
     transform: scale(0.98);
+}
+
+/* ===== Edit Modal ===== */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.modal-overlay[hidden] {
+    display: none;
+}
+
+.modal-content {
+    background-color: var(--color-bg);
+    border-radius: var(--radius-lg);
+    padding: var(--space-lg);
+    width: 260px;
+    max-width: 90%;
+    box-shadow: var(--shadow-lg);
+}
+
+.modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--space-md);
+}
+
+.modal-title {
+    font-size: var(--font-size-lg);
+    font-weight: 600;
+    color: var(--color-text);
+}
+
+.modal-close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    background: transparent;
+    border: none;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    color: var(--color-text-muted);
+    transition: all var(--transition-fast);
+}
+
+.modal-close:hover {
+    background-color: var(--color-bg-hover);
+    color: var(--color-text-secondary);
+}
+
+.modal-close:focus {
+    outline: none;
+}
+
+.modal-close:focus-visible {
+    box-shadow: var(--focus-ring);
+}
+
+.modal-close svg {
+    width: 16px;
+    height: 16px;
+}
+
+.modal-body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+}
+
+.form-label {
+    font-size: var(--font-size-xs);
+    font-weight: 500;
+    color: var(--color-text-secondary);
+}
+
+.form-input {
+    padding: var(--space-sm);
+    background-color: var(--color-bg-elevated);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    font-family: inherit;
+    font-size: var(--font-size-sm);
+    color: var(--color-text);
+    transition: all var(--transition-fast);
+}
+
+.form-input:hover {
+    border-color: var(--color-border-strong);
+}
+
+.form-input:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: var(--focus-ring);
+}
+
+.form-input::placeholder {
+    color: var(--color-text-muted);
+}
+
+.modal-footer {
+    display: flex;
+    gap: var(--space-sm);
+    margin-top: var(--space-md);
+    padding-top: var(--space-md);
+    border-top: 1px solid var(--color-border);
+}
+
+.btn-danger {
+    background-color: transparent;
+    color: var(--color-error);
+    border: 1px solid var(--color-error);
+}
+
+.btn-danger:hover {
+    background-color: var(--color-error);
+    color: white;
 }
 
 /* ===== Info Section ===== */
@@ -886,6 +1458,45 @@ body {
 
     .non-default-indicator {
         color: Highlight;
+    }
+
+    .custom-preset-item {
+        border: 2px solid ButtonText;
+    }
+
+    .custom-preset-item.drag-over {
+        border-color: Highlight;
+    }
+
+    .favorite-btn.active {
+        color: Highlight;
+    }
+
+    .modal-overlay {
+        background-color: rgba(0, 0, 0, 0.8);
+    }
+
+    .modal-content {
+        border: 2px solid ButtonText;
+    }
+
+    .form-input {
+        border: 2px solid ButtonText;
+    }
+
+    .form-input:focus {
+        border-color: Highlight;
+        box-shadow: none;
+    }
+
+    .btn-danger {
+        border-color: Mark;
+        color: Mark;
+    }
+
+    .btn-danger:hover {
+        background-color: Mark;
+        color: HighlightText;
     }
 
     /* Ensure all interactive elements have visible borders */

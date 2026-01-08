@@ -2,19 +2,19 @@
  * Claude Chat Width Customizer - Content Script
  * ==============================================
  *
- * VERSION 1.6.0 - Keyboard & Accessibility
+ * VERSION 1.7.0 - Custom Presets
  *
  * Injected into claude.ai pages to apply width customizations to the chat area.
  * Works with the background script to handle keyboard shortcuts for preset
  * cycling and default toggling.
  *
- * Changes from 1.5.1:
- * - Updated version to 1.6.0
- * - Added support for cyclePresets and toggleDefault message actions
- * - Improved logging for debugging keyboard shortcuts
+ * Changes from 1.6.0:
+ * - Updated version to 1.7.0
+ * - Changed default width from 60% to 70%
+ * - Added support for custom presets and context menu
  *
  * @author DoubleGate
- * @version 1.6.0
+ * @version 1.7.0
  * @license MIT
  */
 
@@ -25,7 +25,7 @@
     // CONSTANTS
     // =========================================================================
 
-    const DEFAULT_WIDTH_PERCENT = 60;
+    const DEFAULT_WIDTH_PERCENT = 70;
     const MIN_WIDTH_PERCENT = 40;
     const MAX_WIDTH_PERCENT = 100;
     const STYLE_ELEMENT_ID = 'claude-width-customizer-styles';
@@ -336,7 +336,7 @@
 
         const css = `
             /*
-             * Claude Chat Width Customizer - Minimal CSS v1.6.0
+             * Claude Chat Width Customizer - Minimal CSS v1.7.0
              */
 
             /* Smooth transitions for styled elements */
@@ -536,7 +536,7 @@
     // =========================================================================
 
     async function initialize() {
-        console.log('[Claude Width] Initializing content script v1.6.0...');
+        console.log('[Claude Width] Initializing content script v1.7.0...');
 
         try {
             // Load saved preference
