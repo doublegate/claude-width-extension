@@ -31,20 +31,28 @@
     'use strict';
 
     // =========================================================================
-    // CONSTANTS
+    // SHARED CONSTANTS (from lib/constants.js)
     // =========================================================================
 
-    /**
-     * Storage key for width preference.
-     * @type {string}
-     */
-    const STORAGE_KEY = 'chatWidthPercent';
+    const {
+        DEFAULT_WIDTH,
+        MIN_WIDTH,
+        MAX_WIDTH,
+        PRESET_CYCLE,
+        STORAGE_KEY,
+        LAST_WIDTH_KEY,
+        ENHANCED_KEYS,
+        ENHANCED_DEFAULTS,
+        MAX_CUSTOM_PRESETS,
+        MAX_RECENT_WIDTHS,
+        BUILT_IN_PRESETS,
+        BADGE_COLOR,
+        BADGE_TEXT_COLOR
+    } = window.ClaudeWidthConstants;
 
-    /**
-     * Storage key for last non-default width (for toggle feature).
-     * @type {string}
-     */
-    const LAST_WIDTH_KEY = 'lastNonDefaultWidth';
+    // =========================================================================
+    // LOCAL CONSTANTS (specific to background script)
+    // =========================================================================
 
     /**
      * Storage key for custom presets.
@@ -76,149 +84,11 @@
      */
     const CURRENT_MIGRATION_VERSION = 2;
 
-    // =========================================================================
-    // ENHANCED STYLING STORAGE KEYS (v1.8.0)
-    // =========================================================================
-
     /**
-     * Storage key for font size percentage.
-     * @type {string}
-     */
-    const FONT_SIZE_KEY = 'fontSizePercent';
-
-    /**
-     * Storage key for line height setting.
-     * @type {string}
-     */
-    const LINE_HEIGHT_KEY = 'lineHeight';
-
-    /**
-     * Storage key for message padding setting.
-     * @type {string}
-     */
-    const MESSAGE_PADDING_KEY = 'messagePadding';
-
-    /**
-     * Storage key for display mode.
-     * @type {string}
-     */
-    const DISPLAY_MODE_KEY = 'displayMode';
-
-    /**
-     * Storage key for code block max height.
-     * @type {string}
-     */
-    const CODE_BLOCK_HEIGHT_KEY = 'codeBlockMaxHeight';
-
-    /**
-     * Storage key for code block word wrap.
-     * @type {string}
-     */
-    const CODE_BLOCK_WRAP_KEY = 'codeBlockWordWrap';
-
-    /**
-     * Storage key for code blocks collapsed state.
-     * @type {string}
-     */
-    const CODE_BLOCKS_COLLAPSED_KEY = 'codeBlocksCollapsed';
-
-    /**
-     * Storage key for show timestamps.
-     * @type {string}
-     */
-    const SHOW_TIMESTAMPS_KEY = 'showTimestamps';
-
-    /**
-     * Storage key for show avatars.
-     * @type {string}
-     */
-    const SHOW_AVATARS_KEY = 'showAvatars';
-
-    /**
-     * Storage key for message bubble style.
-     * @type {string}
-     */
-    const BUBBLE_STYLE_KEY = 'messageBubbleStyle';
-
-    // =========================================================================
-    // ENHANCED STYLING DEFAULTS (v1.8.0)
-    // =========================================================================
-
-    /**
-     * Default values for enhanced styling features.
+     * Alias for enhanced styling defaults (for migration compatibility).
      * @type {Object}
      */
-    const ENHANCED_STYLING_DEFAULTS = {
-        [FONT_SIZE_KEY]: 100,           // 80-120
-        [LINE_HEIGHT_KEY]: 'normal',     // 'compact', 'normal', 'relaxed'
-        [MESSAGE_PADDING_KEY]: 'medium', // 'none', 'small', 'medium', 'large'
-        [DISPLAY_MODE_KEY]: 'comfortable', // 'compact', 'comfortable', 'spacious', 'custom'
-        [CODE_BLOCK_HEIGHT_KEY]: 400,    // 200, 400, 600, 0 (none/unlimited)
-        [CODE_BLOCK_WRAP_KEY]: false,
-        [CODE_BLOCKS_COLLAPSED_KEY]: false,
-        [SHOW_TIMESTAMPS_KEY]: true,
-        [SHOW_AVATARS_KEY]: true,
-        [BUBBLE_STYLE_KEY]: 'rounded'    // 'rounded', 'square', 'minimal'
-    };
-
-    /**
-     * Default width percentage.
-     * @type {number}
-     */
-    const DEFAULT_WIDTH = 85;
-
-    /**
-     * Minimum allowed width.
-     * @type {number}
-     */
-    const MIN_WIDTH = 40;
-
-    /**
-     * Maximum allowed width.
-     * @type {number}
-     */
-    const MAX_WIDTH = 100;
-
-    /**
-     * Width presets for cycling (in order).
-     * @type {number[]}
-     */
-    const PRESET_CYCLE = [50, 70, 85, 100];
-
-    /**
-     * Built-in presets configuration.
-     * @type {Array<{id: string, name: string, width: number, builtIn: boolean}>}
-     */
-    const BUILT_IN_PRESETS = [
-        { id: 'narrow', name: 'Narrow', width: 50, builtIn: true },
-        { id: 'medium', name: 'Medium', width: 70, builtIn: true },
-        { id: 'wide', name: 'Wide', width: 85, builtIn: true },
-        { id: 'full', name: 'Full', width: 100, builtIn: true }
-    ];
-
-    /**
-     * Maximum number of custom presets allowed.
-     * @type {number}
-     */
-    const MAX_CUSTOM_PRESETS = 4;
-
-    /**
-     * Maximum number of recent widths to track.
-     * @type {number}
-     */
-    const MAX_RECENT_WIDTHS = 3;
-
-    /**
-     * Badge background color (neutral grey).
-     * @type {string}
-     */
-    const BADGE_COLOR = '#6B7280';
-
-    /**
-     * Badge text color.
-     * @type {string}
-     */
-    const BADGE_TEXT_COLOR = '#FFFFFF';
+    const ENHANCED_STYLING_DEFAULTS = ENHANCED_DEFAULTS;
 
     /**
      * Context menu IDs.

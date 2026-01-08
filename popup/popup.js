@@ -22,7 +22,7 @@
  * - 2: Select Medium (70%)
  * - 3: Select Wide (85%)
  * - 4: Select Full (100%)
- * - R: Reset to default (70%)
+ * - R: Reset to default (85%)
  * - Escape: Close popup
  * - Alt+Up/Down: Reorder custom presets
  *
@@ -40,55 +40,29 @@
     'use strict';
 
     // =========================================================================
-    // CONSTANTS
+    // SHARED CONSTANTS (from lib/constants.js)
     // =========================================================================
 
-    /**
-     * Storage key for width preference.
-     * @type {string}
-     */
-    const STORAGE_KEY = 'chatWidthPercent';
+    const {
+        DEFAULT_WIDTH,
+        MIN_WIDTH,
+        MAX_WIDTH,
+        STORAGE_KEY,
+        THEME_STORAGE_KEY,
+        DEFAULT_THEME,
+        VALID_THEMES,
+        ENHANCED_KEYS,
+        ENHANCED_DEFAULTS,
+        DISPLAY_MODE_PRESETS,
+        MAX_CUSTOM_PRESETS,
+        MAX_RECENT_WIDTHS,
+        BUILT_IN_PRESETS,
+        TIMING
+    } = window.ClaudeWidthConstants;
 
-    /**
-     * Default width percentage (changed from 70 to 85 in v1.8.0).
-     * @type {number}
-     */
-    const DEFAULT_WIDTH = 85;
-
-    /**
-     * Minimum allowed width.
-     * @type {number}
-     */
-    const MIN_WIDTH = 40;
-
-    /**
-     * Maximum allowed width.
-     * @type {number}
-     */
-    const MAX_WIDTH = 100;
-
-    /**
-     * Maximum number of custom presets allowed.
-     * @type {number}
-     */
-    const MAX_CUSTOM_PRESETS = 4;
-
-    /**
-     * Maximum number of recent widths to track.
-     * @type {number}
-     */
-    const MAX_RECENT_WIDTHS = 3;
-
-    /**
-     * Built-in presets (not editable).
-     * @type {Array<{id: string, name: string, width: number}>}
-     */
-    const BUILT_IN_PRESETS = [
-        { id: 'narrow', name: 'Narrow', width: 50 },
-        { id: 'medium', name: 'Medium', width: 70 },
-        { id: 'wide', name: 'Wide', width: 85 },
-        { id: 'full', name: 'Full', width: 100 }
-    ];
+    // =========================================================================
+    // LOCAL CONSTANTS (specific to popup)
+    // =========================================================================
 
     /**
      * Preset width configurations mapped by keyboard key.
@@ -113,24 +87,6 @@
     };
 
     /**
-     * Storage key for theme preference.
-     * @type {string}
-     */
-    const THEME_STORAGE_KEY = 'theme';
-
-    /**
-     * Default theme (system).
-     * @type {string}
-     */
-    const DEFAULT_THEME = 'system';
-
-    /**
-     * Valid theme values.
-     * @type {string[]}
-     */
-    const VALID_THEMES = ['light', 'dark', 'system'];
-
-    /**
      * Theme display names for announcements.
      * @type {Object<string, string>}
      */
@@ -138,63 +94,6 @@
         'light': 'Light',
         'dark': 'Dark',
         'system': 'System'
-    };
-
-    // =========================================================================
-    // ENHANCED STYLING CONSTANTS (v1.8.0)
-    // =========================================================================
-
-    /**
-     * Storage keys for enhanced styling features.
-     */
-    const ENHANCED_KEYS = {
-        FONT_SIZE: 'fontSizePercent',
-        LINE_HEIGHT: 'lineHeight',
-        MESSAGE_PADDING: 'messagePadding',
-        DISPLAY_MODE: 'displayMode',
-        CODE_BLOCK_HEIGHT: 'codeBlockMaxHeight',
-        CODE_BLOCK_WRAP: 'codeBlockWordWrap',
-        CODE_BLOCKS_COLLAPSED: 'codeBlocksCollapsed',
-        SHOW_TIMESTAMPS: 'showTimestamps',
-        SHOW_AVATARS: 'showAvatars',
-        BUBBLE_STYLE: 'messageBubbleStyle'
-    };
-
-    /**
-     * Default values for enhanced styling.
-     */
-    const ENHANCED_DEFAULTS = {
-        [ENHANCED_KEYS.FONT_SIZE]: 100,
-        [ENHANCED_KEYS.LINE_HEIGHT]: 'normal',
-        [ENHANCED_KEYS.MESSAGE_PADDING]: 'medium',
-        [ENHANCED_KEYS.DISPLAY_MODE]: 'comfortable',
-        [ENHANCED_KEYS.CODE_BLOCK_HEIGHT]: 400,
-        [ENHANCED_KEYS.CODE_BLOCK_WRAP]: false,
-        [ENHANCED_KEYS.CODE_BLOCKS_COLLAPSED]: false,
-        [ENHANCED_KEYS.SHOW_TIMESTAMPS]: true,
-        [ENHANCED_KEYS.SHOW_AVATARS]: true,
-        [ENHANCED_KEYS.BUBBLE_STYLE]: 'rounded'
-    };
-
-    /**
-     * Display mode presets.
-     */
-    const DISPLAY_MODE_PRESETS = {
-        'compact': {
-            lineHeight: 'compact',
-            messagePadding: 'small',
-            fontSize: 95
-        },
-        'comfortable': {
-            lineHeight: 'normal',
-            messagePadding: 'medium',
-            fontSize: 100
-        },
-        'spacious': {
-            lineHeight: 'relaxed',
-            messagePadding: 'large',
-            fontSize: 105
-        }
     };
 
     // =========================================================================
@@ -1223,7 +1122,7 @@
                     dragHandle.focus();
                 }
             }
-        }, 50);
+        }, TIMING.SR_ANNOUNCE_DELAY_MS);
 
         announceChange(`Preset moved ${direction < 0 ? 'up' : 'down'}`);
     }
@@ -1400,7 +1299,7 @@
             // Use setTimeout to ensure the DOM updates
             setTimeout(() => {
                 srAnnouncements.textContent = message;
-            }, 50);
+            }, TIMING.SR_ANNOUNCE_DELAY_MS);
         }
     }
 
@@ -1419,7 +1318,7 @@
 
         // Add pulse animation
         widthValueElement.classList.add('updating');
-        setTimeout(() => widthValueElement.classList.remove('updating'), 150);
+        setTimeout(() => widthValueElement.classList.remove('updating'), TIMING.ANIMATION_MS);
 
         // Update slider ARIA attributes
         sliderElement.setAttribute('aria-valuenow', width);

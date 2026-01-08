@@ -67,21 +67,27 @@ The extension must NOT affect sidebar elements. `isInsideSidebar()` walks up the
 
 ## Key Constants
 
-| Constant | Value | Location |
-|----------|-------|----------|
-| `DEFAULT_WIDTH_PERCENT` | 85 | content.js, background.js, popup.js |
-| `MIN_WIDTH_PERCENT` | 40 | content.js |
-| `MAX_WIDTH_PERCENT` | 100 | content.js |
-| `PRESET_CYCLE` | `[50, 70, 85, 100]` | content.js, background.js |
-| `STORAGE_KEY` | `chatWidthPercent` | all files |
-| `LAST_WIDTH_KEY` | `lastNonDefaultWidth` | content.js |
-| `THEME_STORAGE_KEY` | `theme` | popup.js |
-| `DEFAULT_THEME` | `system` | popup.js |
-| `VALID_THEMES` | `['light', 'dark', 'system']` | popup.js |
-| `BADGE_COLOR` | `#6B7280` | background.js |
-| `MAX_CUSTOM_PRESETS` | 4 | popup.js |
-| `MAX_RECENT_WIDTHS` | 3 | popup.js, background.js |
-| `CURRENT_MIGRATION_VERSION` | 2 | background.js |
+Shared constants are centralized in `lib/constants.js` and accessed via `window.ClaudeWidthConstants`:
+
+| Constant | Value | Description |
+|----------|-------|-------------|
+| `DEFAULT_WIDTH` | 85 | Default width percentage |
+| `MIN_WIDTH` | 40 | Minimum allowed width |
+| `MAX_WIDTH` | 100 | Maximum allowed width |
+| `PRESET_CYCLE` | `[50, 70, 85, 100]` | Width presets for cycling |
+| `STORAGE_KEY` | `chatWidthPercent` | Storage key for width preference |
+| `LAST_WIDTH_KEY` | `lastNonDefaultWidth` | Storage key for toggle feature |
+| `THEME_STORAGE_KEY` | `theme` | Storage key for theme preference |
+| `DEFAULT_THEME` | `system` | Default theme |
+| `VALID_THEMES` | `['light', 'dark', 'system']` | Valid theme values |
+| `BADGE_COLOR` | `#6B7280` | Badge background color (grey) |
+| `MAX_CUSTOM_PRESETS` | 4 | Maximum custom presets allowed |
+| `MAX_RECENT_WIDTHS` | 3 | Maximum recent widths tracked |
+| `ENHANCED_KEYS` | Object | Storage keys for enhanced styling |
+| `ENHANCED_DEFAULTS` | Object | Default values for enhanced styling |
+| `DISPLAY_MODE_PRESETS` | Object | Display mode preset configurations |
+| `TIMING` | Object | Timing constants (debounce, animation, etc.) |
+| `CURRENT_MIGRATION_VERSION` | 2 | Migration version (local to background.js) |
 
 ## Keyboard Shortcuts
 
@@ -211,6 +217,8 @@ claude-width-extension/
 ├── CONTRIBUTING.md            # Contribution guidelines
 ├── LICENSE                    # MIT license
 ├── .gitignore                 # Git exclusions
+├── lib/
+│   └── constants.js           # Shared constants (loaded first by all scripts)
 ├── background/
 │   └── background.js          # Keyboard shortcuts, badge, context menu, migration
 ├── content/

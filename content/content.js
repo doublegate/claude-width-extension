@@ -25,58 +25,33 @@
     'use strict';
 
     // =========================================================================
-    // CONSTANTS
+    // SHARED CONSTANTS (from lib/constants.js)
     // =========================================================================
 
-    const DEFAULT_WIDTH_PERCENT = 85;
-    const MIN_WIDTH_PERCENT = 40;
-    const MAX_WIDTH_PERCENT = 100;
+    const {
+        DEFAULT_WIDTH,
+        MIN_WIDTH,
+        MAX_WIDTH,
+        PRESET_CYCLE,
+        STORAGE_KEY,
+        ENHANCED_KEYS,
+        ENHANCED_DEFAULTS,
+        DISPLAY_MODE_PRESETS,
+        TIMING
+    } = window.ClaudeWidthConstants;
+
+    // Aliases for backward compatibility within this file
+    const DEFAULT_WIDTH_PERCENT = DEFAULT_WIDTH;
+    const MIN_WIDTH_PERCENT = MIN_WIDTH;
+    const MAX_WIDTH_PERCENT = MAX_WIDTH;
+
+    // =========================================================================
+    // LOCAL CONSTANTS (specific to content script)
+    // =========================================================================
+
     const STYLE_ELEMENT_ID = 'claude-width-customizer-styles';
     const ENHANCED_STYLE_ID = 'claude-enhanced-styles';
-    const STORAGE_KEY = 'chatWidthPercent';
     const DATA_ATTR = 'data-claude-width-applied';
-
-    /**
-     * Width presets for cycling (in order).
-     * @type {number[]}
-     */
-    const PRESET_CYCLE = [50, 70, 85, 100];
-
-    // =========================================================================
-    // ENHANCED STYLING CONSTANTS (v1.8.0)
-    // =========================================================================
-
-    /**
-     * Storage keys for enhanced styling features.
-     */
-    const ENHANCED_KEYS = {
-        FONT_SIZE: 'fontSizePercent',
-        LINE_HEIGHT: 'lineHeight',
-        MESSAGE_PADDING: 'messagePadding',
-        DISPLAY_MODE: 'displayMode',
-        CODE_BLOCK_HEIGHT: 'codeBlockMaxHeight',
-        CODE_BLOCK_WRAP: 'codeBlockWordWrap',
-        CODE_BLOCKS_COLLAPSED: 'codeBlocksCollapsed',
-        SHOW_TIMESTAMPS: 'showTimestamps',
-        SHOW_AVATARS: 'showAvatars',
-        BUBBLE_STYLE: 'messageBubbleStyle'
-    };
-
-    /**
-     * Default values for enhanced styling.
-     */
-    const ENHANCED_DEFAULTS = {
-        [ENHANCED_KEYS.FONT_SIZE]: 100,
-        [ENHANCED_KEYS.LINE_HEIGHT]: 'normal',
-        [ENHANCED_KEYS.MESSAGE_PADDING]: 'medium',
-        [ENHANCED_KEYS.DISPLAY_MODE]: 'comfortable',
-        [ENHANCED_KEYS.CODE_BLOCK_HEIGHT]: 400,
-        [ENHANCED_KEYS.CODE_BLOCK_WRAP]: false,
-        [ENHANCED_KEYS.CODE_BLOCKS_COLLAPSED]: false,
-        [ENHANCED_KEYS.SHOW_TIMESTAMPS]: true,
-        [ENHANCED_KEYS.SHOW_AVATARS]: true,
-        [ENHANCED_KEYS.BUBBLE_STYLE]: 'rounded'
-    };
 
     /**
      * Line height values mapping.
@@ -95,28 +70,6 @@
         'small': 8,
         'medium': 16,
         'large': 24
-    };
-
-    /**
-     * Display mode presets.
-     */
-    const DISPLAY_MODE_PRESETS = {
-        'compact': {
-            lineHeight: 'compact',
-            messagePadding: 'small',
-            fontSize: 95
-        },
-        'comfortable': {
-            lineHeight: 'normal',
-            messagePadding: 'medium',
-            fontSize: 100
-        },
-        'spacious': {
-            lineHeight: 'relaxed',
-            messagePadding: 'large',
-            fontSize: 105
-        }
-        // 'custom' uses user-defined values
     };
 
     // Selectors that indicate an element is part of the sidebar
@@ -632,7 +585,7 @@
 
         applyDebounceTimer = setTimeout(() => {
             applyWidthToChat(widthPercent);
-        }, 50);
+        }, TIMING.DEBOUNCE_MS);
     }
 
     // =========================================================================
@@ -966,11 +919,9 @@
             injectEnhancedCSS();
 
             // Apply initial styles with delays to catch lazy-loaded content
-            setTimeout(() => applyWidthToChat(savedWidth), 100);
-            setTimeout(() => applyWidthToChat(currentWidth), 500);
-            setTimeout(() => applyWidthToChat(currentWidth), 1000);
-            setTimeout(() => applyWidthToChat(currentWidth), 2000);
-            setTimeout(() => applyWidthToChat(currentWidth), 3000);
+            TIMING.INIT_RETRY_INTERVALS.forEach((delay, index) => {
+                setTimeout(() => applyWidthToChat(index === 0 ? savedWidth : currentWidth), delay);
+            });
 
             // Apply collapsed code blocks if enabled
             if (enhancedSettings[ENHANCED_KEYS.CODE_BLOCKS_COLLAPSED]) {

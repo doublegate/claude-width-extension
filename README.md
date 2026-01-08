@@ -127,6 +127,8 @@ claude-width-extension/
 │   ├── icon-48.png         # Toolbar icon (48px)
 │   ├── icon-96.png         # High-DPI toolbar icon (96px)
 │   └── icon-256.png        # Mozilla Add-ons listing icon (256px)
+├── lib/
+│   └── constants.js        # Shared constants (loaded first by all scripts)
 ├── background/
 │   └── background.js       # Background script for keyboard commands
 ├── content/
@@ -220,6 +222,10 @@ DoubleGate - [GitHub](https://github.com/doublegate)
 - **Changed**: Toolbar badge color changed from terracotta to neutral grey
 - **Technical**: Migration version 2 for enhanced styling settings
 - **Technical**: New storage keys for all enhanced styling options
+- **Refactor**: Centralized shared constants in `lib/constants.js` module
+- **Refactor**: All scripts now import from `window.ClaudeWidthConstants` global
+- **Refactor**: Extracted magic numbers to named `TIMING` constants
+- **Refactor**: Eliminated ~60 lines of duplicated constant definitions
 
 ### v1.7.0 (Custom Presets)
 - **New**: Create up to 4 custom presets with custom names and widths

@@ -44,7 +44,7 @@
   },
 
   "background": {
-    "scripts": ["background/background.js"],
+    "scripts": ["lib/constants.js", "background/background.js"],
     "persistent": false
   },
 
@@ -65,7 +65,7 @@
   "content_scripts": [
     {
       "matches": ["*://claude.ai/*"],
-      "js": ["content/content.js"],
+      "js": ["lib/constants.js", "content/content.js"],
       "css": ["content/content.css"],
       "run_at": "document_end"
     }
