@@ -6,7 +6,7 @@
  * Primarily provides a link to Firefox's built-in shortcut manager.
  *
  * @author DoubleGate
- * @version 1.8.1
+ * @version 1.8.2
  * @license MIT
  */
 

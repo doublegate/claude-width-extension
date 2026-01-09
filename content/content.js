@@ -2,21 +2,30 @@
  * Claude Chat Width Customizer - Content Script
  * ==============================================
  *
- * VERSION 1.8.1 - Enhanced Styling Fix
+ * VERSION 1.8.2 - Technical Debt Remediation
  *
  * Injected into claude.ai pages to apply width customizations to the chat area.
  * Works with the background script to handle keyboard shortcuts for preset
  * cycling and default toggling.
  *
+ * Changes from 1.8.1:
+ * - REFACTORED: Replaced inline style manipulation with CSS custom properties
+ * - NEW: CSS variables (--claude-width-*) defined on :root for dynamic updates
+ * - NEW: updateCSSVariables() updates all styling with single :root manipulation
+ * - NEW: clearCSSVariables() clears all CSS custom properties efficiently
+ * - PERFORMANCE: Eliminated O(n) DOM queries - now O(1) root element updates
+ * - DEPRECATED: applyEnhancedInlineStyles() now redirects to updateCSSVariables()
+ * - CLEANUP: Removed unused enhancedDebounceTimer variable (dead code)
+ * - DOCS: Added comprehensive documentation for CSS selector arrays
+ * - DOCS: Added helper functions to reduce code duplication
+ *
  * Changes from 1.8.0:
- * - Fixed real-time enhanced styling updates (applyEnhancedInlineStyles now called on setting changes)
+ * - Fixed real-time enhanced styling updates
  * - Added comprehensive DOM selectors for claude.ai's Tailwind CSS structure
- * - Added clearEnhancedInlineStyles for clean style re-application
- * - Added applyEnhancedInlineStylesDebounced for MutationObserver efficiency
  * - Enhanced MutationObserver to detect enhanced-styling-relevant elements
  *
  * @author DoubleGate
- * @version 1.8.1
+ * @version 1.8.2
  * @license MIT
  */
 
@@ -53,6 +62,33 @@
     const DATA_ATTR = 'data-claude-width-applied';
 
     /**
+     * CSS Custom Property names for enhanced styling.
+     * Using CSS variables allows centralized styling updates without inline style manipulation.
+     * JavaScript only needs to update these variables on :root, and all CSS rules update automatically.
+     *
+     * Benefits:
+     * - Reduced DOM manipulation (better performance)
+     * - Centralized styling in CSS
+     * - Uses CSS cascade properly
+     * - Eliminates duplication between CSS injection and inline styles
+     */
+    const CSS_VARS = {
+        FONT_SIZE: '--claude-width-font-size',
+        LINE_HEIGHT: '--claude-width-line-height',
+        MESSAGE_PADDING: '--claude-width-message-padding',
+        CODE_MAX_HEIGHT: '--claude-width-code-max-height',
+        CODE_OVERFLOW: '--claude-width-code-overflow',
+        CODE_WHITESPACE: '--claude-width-code-whitespace',
+        CODE_WORDWRAP: '--claude-width-code-wordwrap',
+        AVATAR_DISPLAY: '--claude-width-avatar-display',
+        TIMESTAMP_DISPLAY: '--claude-width-timestamp-display',
+        BUBBLE_RADIUS: '--claude-width-bubble-radius',
+        BUBBLE_BG: '--claude-width-bubble-bg',
+        BUBBLE_BORDER: '--claude-width-bubble-border',
+        BUBBLE_SHADOW: '--claude-width-bubble-shadow'
+    };
+
+    /**
      * Line height values mapping.
      */
     const LINE_HEIGHT_VALUES = {
@@ -71,33 +107,64 @@
         'large': 24
     };
 
-    // Selectors that indicate an element is part of the sidebar
+    /**
+     * Selectors that indicate an element is part of the sidebar.
+     * Used by isInsideSidebar() to prevent width styles from affecting navigation.
+     *
+     * @type {string[]}
+     *
+     * IMPORTANT: These selectors are checked against an element AND all its ancestors.
+     * If any ancestor matches, the element is considered "inside sidebar."
+     *
+     * Selector categories:
+     * - SEMANTIC: HTML5 semantic elements (nav, aside)
+     * - ARIA: Accessibility attributes for screen readers
+     * - DATA-TESTID: Testing infrastructure attributes (most stable)
+     * - CLASS: Dynamic class name patterns (both PascalCase and kebab-case)
+     *
+     * The sidebar contains:
+     * - Conversation history list
+     * - Navigation menu
+     * - User settings/profile access
+     * - Project/workspace selector
+     */
     const SIDEBAR_INDICATORS = [
-        'nav',
-        'aside',
-        '[role="navigation"]',
-        '[data-testid="sidebar"]',
-        '[data-testid="side-nav"]',
-        '[data-testid="history-panel"]',
-        '[aria-label*="sidebar" i]',
-        '[aria-label*="navigation" i]',
-        '[aria-label*="history" i]',
-        '[aria-label*="menu" i]',
-        '[class*="Sidebar"]',
-        '[class*="sidebar"]',
-        '[class*="SideNav"]',
-        '[class*="sidenav"]',
-        '[class*="side-nav"]',
-        '[class*="LeftPanel"]',
-        '[class*="left-panel"]',
-        '[class*="NavPanel"]',
-        '[class*="nav-panel"]',
-        '[class*="NavigationMenu"]',
-        '[class*="navigation-menu"]',
-        '[class*="HistoryPanel"]',
-        '[class*="history-panel"]',
-        '[class*="ConversationList"]',
-        '[class*="conversation-list"]'
+        // SEMANTIC HTML: Standard navigation/sidebar elements
+        'nav',                                 // HTML5 <nav> element
+        'aside',                               // HTML5 <aside> element (sidebar content)
+
+        // ARIA: Accessibility role-based selectors (very stable)
+        '[role="navigation"]',                 // ARIA navigation landmark
+
+        // DATA-TESTID: Testing infrastructure (stable across deploys)
+        '[data-testid="sidebar"]',             // Direct sidebar test ID
+        '[data-testid="side-nav"]',            // Side navigation test ID
+        '[data-testid="history-panel"]',       // Conversation history panel
+
+        // ARIA-LABEL: Accessibility labels (case-insensitive)
+        '[aria-label*="sidebar" i]',           // Any element labeled as sidebar
+        '[aria-label*="navigation" i]',        // Any element labeled as navigation
+        '[aria-label*="history" i]',           // Any element labeled as history
+        '[aria-label*="menu" i]',              // Any element labeled as menu
+
+        // CLASS: Sidebar component patterns (PascalCase - React components)
+        '[class*="Sidebar"]',                  // Sidebar, LeftSidebar, SidebarNav, etc.
+        '[class*="SideNav"]',                  // SideNav, SideNavigation, etc.
+        '[class*="LeftPanel"]',                // LeftPanel, LeftPanelContainer, etc.
+        '[class*="NavPanel"]',                 // NavPanel, NavPanelWrapper, etc.
+        '[class*="NavigationMenu"]',           // NavigationMenu component
+        '[class*="HistoryPanel"]',             // HistoryPanel for conversation list
+        '[class*="ConversationList"]',         // ConversationList component
+
+        // CLASS: Sidebar component patterns (kebab-case - CSS classes)
+        '[class*="sidebar"]',                  // sidebar, left-sidebar, sidebar-nav
+        '[class*="sidenav"]',                  // sidenav, sidenav-container
+        '[class*="side-nav"]',                 // side-nav, side-nav-wrapper
+        '[class*="left-panel"]',               // left-panel, left-panel-container
+        '[class*="nav-panel"]',                // nav-panel, nav-panel-wrapper
+        '[class*="navigation-menu"]',          // navigation-menu class
+        '[class*="history-panel"]',            // history-panel for conversations
+        '[class*="conversation-list"]'         // conversation-list component
     ];
 
     // =========================================================================
@@ -111,6 +178,74 @@
 
     // Enhanced styling state (v1.8.0)
     let enhancedSettings = { ...ENHANCED_DEFAULTS };
+
+    // =========================================================================
+    // CACHED SELECTOR STRINGS (Performance Optimization)
+    // =========================================================================
+    // Pre-computed combined selectors to avoid repeated array.join() operations.
+    // These are used in querySelectorAll() calls and element.matches() checks.
+
+    /**
+     * Combined selector for width-relevant container elements.
+     * These elements need max-width/width adjustments.
+     * @type {string}
+     */
+    const WIDTH_CONTAINER_SELECTOR = [
+        '[class*="mx-auto"]',
+        'form',
+        '[class*="Composer"]',
+        '[class*="composer"]'
+    ].join(',');
+
+    /**
+     * Combined selector for width-relevant content elements.
+     * These elements only need max-width adjustments.
+     * @type {string}
+     */
+    const WIDTH_CONTENT_SELECTOR = [
+        '[class*="Message"]',
+        '[class*="message"]',
+        '[class*="Thread"]',
+        '[class*="thread"]',
+        '[class*="Conversation"]',
+        '[class*="conversation"]'
+    ].join(',');
+
+    /**
+     * Combined selector for prose/markdown elements.
+     * @type {string}
+     */
+    const PROSE_SELECTOR = '.prose, [class*="prose"], [class*="Markdown"], [class*="markdown"]';
+
+    /**
+     * Combined selector for code blocks.
+     * @type {string}
+     */
+    const CODE_BLOCK_SELECTOR = 'pre, [class*="CodeBlock"], [class*="code-block"]';
+
+    /**
+     * Combined selector for width-relevant elements (used in MutationObserver).
+     * @type {string}
+     */
+    const WIDTH_RELEVANT_SELECTOR = `${WIDTH_CONTAINER_SELECTOR}, ${WIDTH_CONTENT_SELECTOR}`;
+
+    /**
+     * Combined selector for enhanced-styling-relevant elements (used in MutationObserver).
+     * @type {string}
+     */
+    const ENHANCED_RELEVANT_SELECTOR = [
+        '.prose',
+        '[class*="prose"]',
+        '[class*="Message"]',
+        '[class*="message"]',
+        'pre',
+        '[class*="CodeBlock"]',
+        '[class*="code-block"]',
+        '[class*="avatar" i]',
+        '[class*="Avatar"]',
+        'time',
+        '[class*="timestamp" i]'
+    ].join(',');
 
     // =========================================================================
     // HELPER FUNCTIONS
@@ -158,123 +293,282 @@
         styledElements.clear();
     }
 
+    /**
+     * Check if an element matches a selector (safely handles invalid selectors).
+     *
+     * @param {Element} element - The element to check
+     * @param {string} selector - CSS selector to match against
+     * @returns {boolean} True if element matches selector
+     */
+    function safeMatches(element, selector) {
+        try {
+            return element.matches && element.matches(selector);
+        } catch (e) {
+            // Invalid selector
+            return false;
+        }
+    }
+
+    /**
+     * Check if an element has a descendant matching a selector (safely).
+     *
+     * @param {Element} element - The element to search within
+     * @param {string} selector - CSS selector to find
+     * @returns {boolean} True if a matching descendant exists
+     */
+    function safeHasDescendant(element, selector) {
+        try {
+            return element.querySelector && !!element.querySelector(selector);
+        } catch (e) {
+            // Invalid selector
+            return false;
+        }
+    }
+
+    /**
+     * Process elements matching a selector, excluding sidebar elements.
+     * Consolidates the common pattern of querySelectorAll + forEach + isInsideSidebar check.
+     *
+     * @param {string} selector - CSS selector to query
+     * @param {function(Element): void} callback - Function to call for each non-sidebar element
+     * @param {Element} [root=document] - Root element to query from
+     * @returns {number} Count of elements processed
+     */
+    function processNonSidebarElements(selector, callback, root = document) {
+        let count = 0;
+        try {
+            const elements = root.querySelectorAll(selector);
+            elements.forEach(el => {
+                if (!isInsideSidebar(el)) {
+                    callback(el);
+                    count++;
+                }
+            });
+        } catch (e) {
+            console.warn('[Claude Width] Invalid selector:', selector, e);
+        }
+        return count;
+    }
+
+    /**
+     * Check if an element is relevant for width styling.
+     *
+     * @param {Element} element - The element to check
+     * @returns {boolean} True if element needs width styling
+     */
+    function isWidthRelevant(element) {
+        return safeMatches(element, WIDTH_RELEVANT_SELECTOR) ||
+               safeHasDescendant(element, WIDTH_RELEVANT_SELECTOR);
+    }
+
+    /**
+     * Check if an element is relevant for enhanced styling.
+     *
+     * @param {Element} element - The element to check
+     * @returns {boolean} True if element needs enhanced styling
+     */
+    function isEnhancedRelevant(element) {
+        return safeMatches(element, ENHANCED_RELEVANT_SELECTOR) ||
+               safeHasDescendant(element, ENHANCED_RELEVANT_SELECTOR);
+    }
+
     // =========================================================================
     // ENHANCED STYLING FUNCTIONS (v1.8.0)
     // =========================================================================
 
     /**
+     * CSS SELECTOR DESIGN PHILOSOPHY
+     * ===============================
+     * Claude.ai uses React with dynamically-generated class names (Tailwind CSS + custom classes).
+     * Class names may change between deployments, so we use multiple selector strategies:
+     *
+     * 1. **Class Pattern Matching** - [class*="Foo"] catches FooBar, BarFoo, etc.
+     * 2. **Case Variants** - Both PascalCase and kebab-case versions
+     * 3. **Data Attributes** - data-testid attributes are more stable
+     * 4. **Semantic Elements** - <time>, <pre>, <code> are reliable
+     * 5. **Exclusion Patterns** - :not() prevents matching unwanted containers
+     *
+     * Selectors are ordered from most specific to most general for optimal matching.
+     */
+
+    /**
      * Selectors for message content (text that needs typography styles).
-     * These are the actual elements on claude.ai that contain text.
+     * Targets the actual text-containing elements for font-size and line-height.
+     *
+     * @type {string[]}
+     *
+     * Selector groups:
+     * - PROSE: Claude wraps markdown-rendered content in .prose containers
+     *   These use Tailwind's typography plugin for consistent text styling
+     * - MESSAGE: Generic message content wrappers (both capitalized React and kebab-case CSS)
+     * - CHAT: Broader conversation-level text containers
+     * - MARKDOWN: Rendered markdown content blocks
+     * - TURNS: Human/Assistant message turn containers
      */
     const MESSAGE_TEXT_SELECTORS = [
-        // Prose content (Claude's main text container)
-        '.prose',
-        '.prose p',
-        '.prose li',
-        '.prose span',
-        '.prose div',
-        '[class*="prose"]',
-        '[class*="prose"] p',
-        '[class*="prose"] li',
-        // Message containers
-        '[class*="Message"]',
-        '[class*="message"]',
-        '[class*="MessageContent"]',
-        '[class*="message-content"]',
-        // Generic text containers in chat
-        '[class*="ConversationMessage"]',
-        '[class*="conversation-message"]',
-        '[class*="ChatMessage"]',
-        '[class*="chat-message"]',
-        // Markdown rendered content
-        '[class*="Markdown"]',
-        '[class*="markdown"]',
-        '[class*="MarkdownContent"]',
-        // Response/human turn containers
-        '[class*="ResponseContent"]',
-        '[class*="HumanContent"]',
-        '[class*="AssistantContent"]',
-        '[class*="human-turn"]',
-        '[class*="assistant-turn"]'
+        // PROSE: Claude's primary text container using Tailwind Typography plugin
+        // .prose applies consistent typography to markdown-rendered content
+        '.prose',                              // Direct prose class
+        '.prose p',                            // Paragraphs within prose
+        '.prose li',                           // List items within prose
+        '.prose span',                         // Inline text within prose
+        '.prose div',                          // Div containers within prose
+        '[class*="prose"]',                    // Any class containing "prose" (e.g., prose-sm)
+        '[class*="prose"] p',                  // Paragraphs in prose-like containers
+        '[class*="prose"] li',                 // List items in prose-like containers
+
+        // MESSAGE: Primary message content containers
+        // React components often use PascalCase class naming
+        '[class*="Message"]',                  // PascalCase (MessageContent, MessageBody, etc.)
+        '[class*="message"]',                  // kebab-case variants
+        '[class*="MessageContent"]',           // Explicit content container
+        '[class*="message-content"]',          // kebab-case content container
+
+        // CHAT: Broader conversation-level containers
+        '[class*="ConversationMessage"]',      // Full conversation message wrapper
+        '[class*="conversation-message"]',     // kebab-case variant
+        '[class*="ChatMessage"]',              // Chat-specific message wrapper
+        '[class*="chat-message"]',             // kebab-case variant
+
+        // MARKDOWN: Rendered markdown content
+        '[class*="Markdown"]',                 // Markdown component wrapper
+        '[class*="markdown"]',                 // kebab-case variant
+        '[class*="MarkdownContent"]',          // Explicit markdown content
+
+        // TURNS: Human vs Assistant message containers
+        '[class*="ResponseContent"]',          // Claude's response content
+        '[class*="HumanContent"]',             // User's message content
+        '[class*="AssistantContent"]',         // Assistant-specific content
+        '[class*="human-turn"]',               // Human turn container
+        '[class*="assistant-turn"]'            // Assistant turn container
     ];
 
     /**
      * Selectors for message containers (elements that need padding/bubble styles).
+     * Targets the outer wrapper elements for spacing and border-radius.
+     *
+     * @type {string[]}
+     *
+     * Uses :not() to exclude list containers that wrap multiple messages.
+     * MessageList should not receive padding meant for individual messages.
      */
     const MESSAGE_CONTAINER_SELECTORS = [
-        '[class*="Message"]:not([class*="MessageList"])',
-        '[class*="message"]:not([class*="message-list"])',
-        '[class*="ConversationMessage"]',
-        '[class*="ChatMessage"]',
-        '[class*="turn-"]',
-        '[class*="Turn"]',
-        '[data-testid*="message"]',
-        '[data-testid*="turn"]'
+        // MESSAGE: Individual message wrappers, excluding list containers
+        '[class*="Message"]:not([class*="MessageList"])',    // Exclude message lists
+        '[class*="message"]:not([class*="message-list"])',   // kebab-case with exclusion
+
+        // CONVERSATION: Full message containers
+        '[class*="ConversationMessage"]',      // Conversation-level message wrapper
+        '[class*="ChatMessage"]',              // Chat-specific message wrapper
+
+        // TURNS: Human/Assistant turn wrappers
+        '[class*="turn-"]',                    // Hyphenated turn prefix
+        '[class*="Turn"]',                     // PascalCase turn containers
+
+        // DATA-TESTID: More stable selectors used in testing infrastructure
+        '[data-testid*="message"]',            // Test ID containing "message"
+        '[data-testid*="turn"]'                // Test ID containing "turn"
     ];
 
     /**
-     * Selectors for avatar elements.
+     * Selectors for avatar elements (user and Claude profile pictures).
+     * Used to show/hide avatars based on user preference.
+     *
+     * @type {string[]}
+     *
+     * Strategy: Target common avatar class patterns + img elements with avatar-related alt text.
+     * The 'i' flag makes class matching case-insensitive.
      */
     const AVATAR_SELECTORS = [
-        '[class*="avatar" i]',
-        '[class*="Avatar"]',
-        '[class*="profile-pic" i]',
-        '[class*="user-icon" i]',
-        '[class*="ProfileImage"]',
-        '[class*="UserIcon"]',
-        '[class*="ClaudeIcon"]',
-        '[class*="HumanIcon"]',
-        'img[alt*="avatar" i]',
-        'img[alt*="profile" i]',
-        '[data-testid*="avatar"]'
+        // CLASS-BASED: Common avatar class naming patterns
+        '[class*="avatar" i]',                 // Case-insensitive avatar class match
+        '[class*="Avatar"]',                   // PascalCase (AvatarComponent, UserAvatar)
+        '[class*="profile-pic" i]',            // Profile picture containers
+        '[class*="user-icon" i]',              // User icon containers
+
+        // SPECIFIC COMPONENTS: Known Claude.ai component patterns
+        '[class*="ProfileImage"]',             // Profile image wrapper
+        '[class*="UserIcon"]',                 // User icon component
+        '[class*="ClaudeIcon"]',               // Claude's avatar icon
+        '[class*="HumanIcon"]',                // Human user's avatar icon
+
+        // IMAGE ELEMENTS: Target img tags by alt text content
+        'img[alt*="avatar" i]',                // Images with "avatar" in alt text
+        'img[alt*="profile" i]',               // Images with "profile" in alt text
+
+        // TEST-ID: Stable testing selectors
+        '[data-testid*="avatar"]'              // Test ID containing "avatar"
     ];
 
     /**
-     * Selectors for timestamp elements.
+     * Selectors for timestamp elements (message time indicators).
+     * Used to show/hide timestamps based on user preference.
+     *
+     * @type {string[]}
+     *
+     * Includes semantic HTML5 <time> element which is the most reliable indicator.
      */
     const TIMESTAMP_SELECTORS = [
-        '[class*="timestamp" i]',
-        '[class*="Timestamp"]',
-        'time',
-        '[datetime]',
-        '[class*="TimeAgo"]',
-        '[class*="time-ago"]',
-        '[class*="MessageTime"]',
-        '[class*="message-time"]',
-        '[data-testid*="timestamp"]',
-        '[data-testid*="time"]'
+        // CLASS-BASED: Common timestamp class patterns
+        '[class*="timestamp" i]',              // Case-insensitive timestamp match
+        '[class*="Timestamp"]',                // PascalCase timestamp component
+
+        // SEMANTIC HTML: Standard time elements
+        'time',                                // HTML5 <time> element
+        '[datetime]',                          // Any element with datetime attribute
+
+        // RELATIVE TIME: "2 hours ago" style displays
+        '[class*="TimeAgo"]',                  // TimeAgo component
+        '[class*="time-ago"]',                 // kebab-case time-ago
+
+        // MESSAGE-SPECIFIC: Time displays within messages
+        '[class*="MessageTime"]',              // Message timestamp component
+        '[class*="message-time"]',             // kebab-case variant
+
+        // TEST-ID: Stable testing selectors
+        '[data-testid*="timestamp"]',          // Test ID containing "timestamp"
+        '[data-testid*="time"]'                // Test ID containing "time"
     ];
 
     /**
-     * Selectors for code blocks.
+     * Selectors for code blocks (syntax-highlighted code containers).
+     * Used to apply max-height, word-wrap, and collapse functionality.
+     *
+     * @type {string[]}
+     *
+     * Primary targets are semantic <pre> and <code> elements, with fallback
+     * to class-based patterns for custom code block components.
      */
     const CODE_BLOCK_SELECTORS = [
-        'pre',
-        'pre code',
-        '[class*="CodeBlock"]',
-        '[class*="code-block"]',
-        '[class*="codeblock"]',
-        '[class*="code-container"]',
-        '[class*="CodeContainer"]',
-        '[data-testid*="code-block"]'
+        // SEMANTIC HTML: Standard code elements
+        'pre',                                 // Preformatted text (main code container)
+        'pre code',                            // Code within preformatted blocks
+
+        // CLASS-BASED: Custom code block components
+        '[class*="CodeBlock"]',                // CodeBlock component wrapper
+        '[class*="code-block"]',               // kebab-case variant
+        '[class*="codeblock"]',                // No-separator variant
+
+        // CONTAINER: Code container wrappers
+        '[class*="code-container"]',           // Code container class
+        '[class*="CodeContainer"]',            // PascalCase container
+
+        // TEST-ID: Stable testing selectors
+        '[data-testid*="code-block"]'          // Test ID containing "code-block"
     ];
 
     /**
-     * Generate CSS for enhanced styling features.
+     * Generate CSS for enhanced styling features using CSS custom properties.
      * Uses broad selectors with high specificity to override Claude's styles.
+     *
+     * CSS Custom Properties Approach (v1.8.2):
+     * - CSS rules reference var(--claude-width-*) variables
+     * - JavaScript updates variables on :root, not individual elements
+     * - Benefits: reduced DOM manipulation, centralized styling, better performance
+     *
      * @returns {string} CSS string
      */
     function generateEnhancedCSS() {
-        const settings = enhancedSettings;
-        const fontSizePercent = settings.fontSizePercent || ENHANCED_DEFAULTS.fontSizePercent;
-        const lineHeightValue = LINE_HEIGHT_VALUES[settings.lineHeight] || LINE_HEIGHT_VALUES.normal;
-        const messagePaddingValue = MESSAGE_PADDING_VALUES[settings.messagePadding] || MESSAGE_PADDING_VALUES.medium;
-        const codeBlockHeight = settings.codeBlockMaxHeight;
-        const codeBlockWrap = settings.codeBlockWordWrap;
-        const showTimestamps = settings.showTimestamps;
-        const showAvatars = settings.showAvatars;
-        const bubbleStyle = settings.messageBubbleStyle;
-
         // Build comprehensive selector strings
         const textSelectors = MESSAGE_TEXT_SELECTORS.join(',\n            ');
         const containerSelectors = MESSAGE_CONTAINER_SELECTORS.join(',\n            ');
@@ -282,9 +576,38 @@
         const timestampSelectors = TIMESTAMP_SELECTORS.join(',\n            ');
         const codeSelectors = CODE_BLOCK_SELECTORS.join(',\n            ');
 
-        let css = `
-            /* Claude Width Customizer - Enhanced Styling v1.8.0 */
+        // CSS uses var() references - actual values are set via updateCSSVariables()
+        const css = `
+            /* Claude Width Customizer - Enhanced Styling v1.8.2 */
+            /* Uses CSS custom properties for efficient dynamic updates */
             /* These styles use !important to override Claude's React-generated styles */
+
+            /* ========================================
+               CSS CUSTOM PROPERTIES (Variables)
+               Set via JavaScript on :root element
+               ======================================== */
+            :root {
+                /* Typography */
+                ${CSS_VARS.FONT_SIZE}: ${ENHANCED_DEFAULTS.fontSizePercent}%;
+                ${CSS_VARS.LINE_HEIGHT}: ${LINE_HEIGHT_VALUES.normal};
+                ${CSS_VARS.MESSAGE_PADDING}: ${MESSAGE_PADDING_VALUES.medium}px;
+
+                /* Code blocks */
+                ${CSS_VARS.CODE_MAX_HEIGHT}: ${ENHANCED_DEFAULTS.codeBlockMaxHeight}px;
+                ${CSS_VARS.CODE_OVERFLOW}: auto;
+                ${CSS_VARS.CODE_WHITESPACE}: pre;
+                ${CSS_VARS.CODE_WORDWRAP}: normal;
+
+                /* Visibility */
+                ${CSS_VARS.AVATAR_DISPLAY}: block;
+                ${CSS_VARS.TIMESTAMP_DISPLAY}: inline;
+
+                /* Bubble style */
+                ${CSS_VARS.BUBBLE_RADIUS}: inherit;
+                ${CSS_VARS.BUBBLE_BG}: inherit;
+                ${CSS_VARS.BUBBLE_BORDER}: inherit;
+                ${CSS_VARS.BUBBLE_SHADOW}: inherit;
+            }
 
             /* ========================================
                TYPOGRAPHY CONTROLS
@@ -292,8 +615,8 @@
 
             /* Font size and line height for all text content */
             ${textSelectors} {
-                font-size: ${fontSizePercent}% !important;
-                line-height: ${lineHeightValue} !important;
+                font-size: var(${CSS_VARS.FONT_SIZE}) !important;
+                line-height: var(${CSS_VARS.LINE_HEIGHT}) !important;
             }
 
             /* Ensure paragraphs inherit the styles */
@@ -311,83 +634,50 @@
 
             /* Apply padding to message containers */
             ${containerSelectors} {
-                padding: ${messagePaddingValue}px !important;
+                padding: var(${CSS_VARS.MESSAGE_PADDING}) !important;
+                border-radius: var(${CSS_VARS.BUBBLE_RADIUS}) !important;
+                background: var(${CSS_VARS.BUBBLE_BG}) !important;
+                border: var(${CSS_VARS.BUBBLE_BORDER}) !important;
+                box-shadow: var(${CSS_VARS.BUBBLE_SHADOW}) !important;
             }
 
             /* ========================================
                CODE BLOCK STYLING
                ======================================== */
 
-            /* Code block max height */
+            /* Code block max height and overflow */
             ${codeSelectors} {
-                ${codeBlockHeight > 0 ? `max-height: ${codeBlockHeight}px !important;` : 'max-height: none !important;'}
-                overflow-y: ${codeBlockHeight > 0 ? 'auto' : 'visible'} !important;
+                max-height: var(${CSS_VARS.CODE_MAX_HEIGHT}) !important;
+                overflow-y: var(${CSS_VARS.CODE_OVERFLOW}) !important;
             }
 
             /* Code block word wrap */
-            ${codeBlockWrap ? `
             pre,
             pre code,
             [class*="CodeBlock"] code,
             [class*="code-block"] code {
-                white-space: pre-wrap !important;
-                word-wrap: break-word !important;
-                overflow-wrap: break-word !important;
-                word-break: break-word !important;
+                white-space: var(${CSS_VARS.CODE_WHITESPACE}) !important;
+                word-wrap: var(${CSS_VARS.CODE_WORDWRAP}) !important;
+                overflow-wrap: var(${CSS_VARS.CODE_WORDWRAP}) !important;
             }
-            ` : ''}
 
             /* ========================================
                TIMESTAMP VISIBILITY
                ======================================== */
 
-            ${!showTimestamps ? `
-            /* Hide timestamps */
+            /* Timestamps - controlled via CSS variable */
             ${timestampSelectors} {
-                display: none !important;
-                visibility: hidden !important;
-                width: 0 !important;
-                height: 0 !important;
-                overflow: hidden !important;
+                display: var(${CSS_VARS.TIMESTAMP_DISPLAY}) !important;
             }
-            ` : ''}
 
             /* ========================================
                AVATAR VISIBILITY
                ======================================== */
 
-            ${!showAvatars ? `
-            /* Hide avatars */
+            /* Avatars - controlled via CSS variable */
             ${avatarSelectors} {
-                display: none !important;
-                visibility: hidden !important;
-                width: 0 !important;
-                height: 0 !important;
-                overflow: hidden !important;
+                display: var(${CSS_VARS.AVATAR_DISPLAY}) !important;
             }
-            ` : ''}
-
-            /* ========================================
-               MESSAGE BUBBLE STYLES
-               ======================================== */
-
-            ${bubbleStyle === 'square' ? `
-            /* Square bubble style */
-            ${containerSelectors} {
-                border-radius: 0 !important;
-            }
-            ` : ''}
-
-            ${bubbleStyle === 'minimal' ? `
-            /* Minimal bubble style - no background or borders */
-            ${containerSelectors} {
-                border-radius: 0 !important;
-                background: transparent !important;
-                background-color: transparent !important;
-                border: none !important;
-                box-shadow: none !important;
-            }
-            ` : ''}
 
             /* ========================================
                ACCESSIBILITY
@@ -406,9 +696,9 @@
                MARKER FOR STYLED ELEMENTS
                ======================================== */
 
-            /* Mark elements that have been styled by this extension */
-            [data-claude-enhanced-applied] {
-                /* This attribute marks elements we've styled inline */
+            /* Mark document as having enhanced styles applied */
+            html[data-claude-enhanced-active] {
+                /* This attribute marks that enhanced styling is active */
             }
         `;
 
@@ -416,15 +706,101 @@
     }
 
     /**
+     * Update CSS custom properties on :root based on current settings.
+     * This is more efficient than manipulating inline styles on individual elements.
+     */
+    function updateCSSVariables() {
+        const settings = enhancedSettings;
+        const root = document.documentElement;
+
+        // Typography
+        const fontSizePercent = settings.fontSizePercent || ENHANCED_DEFAULTS.fontSizePercent;
+        const lineHeightValue = LINE_HEIGHT_VALUES[settings.lineHeight] || LINE_HEIGHT_VALUES.normal;
+        const messagePaddingValue = MESSAGE_PADDING_VALUES[settings.messagePadding] || MESSAGE_PADDING_VALUES.medium;
+
+        root.style.setProperty(CSS_VARS.FONT_SIZE, `${fontSizePercent}%`);
+        root.style.setProperty(CSS_VARS.LINE_HEIGHT, String(lineHeightValue));
+        root.style.setProperty(CSS_VARS.MESSAGE_PADDING, `${messagePaddingValue}px`);
+
+        // Code blocks
+        const codeBlockHeight = settings.codeBlockMaxHeight;
+        const codeBlockWrap = settings.codeBlockWordWrap;
+
+        if (codeBlockHeight > 0) {
+            root.style.setProperty(CSS_VARS.CODE_MAX_HEIGHT, `${codeBlockHeight}px`);
+            root.style.setProperty(CSS_VARS.CODE_OVERFLOW, 'auto');
+        } else {
+            root.style.setProperty(CSS_VARS.CODE_MAX_HEIGHT, 'none');
+            root.style.setProperty(CSS_VARS.CODE_OVERFLOW, 'visible');
+        }
+
+        if (codeBlockWrap) {
+            root.style.setProperty(CSS_VARS.CODE_WHITESPACE, 'pre-wrap');
+            root.style.setProperty(CSS_VARS.CODE_WORDWRAP, 'break-word');
+        } else {
+            root.style.setProperty(CSS_VARS.CODE_WHITESPACE, 'pre');
+            root.style.setProperty(CSS_VARS.CODE_WORDWRAP, 'normal');
+        }
+
+        // Visibility
+        const showAvatars = settings.showAvatars;
+        const showTimestamps = settings.showTimestamps;
+
+        root.style.setProperty(CSS_VARS.AVATAR_DISPLAY, showAvatars ? 'block' : 'none');
+        root.style.setProperty(CSS_VARS.TIMESTAMP_DISPLAY, showTimestamps ? 'inline' : 'none');
+
+        // Bubble style
+        const bubbleStyle = settings.messageBubbleStyle;
+
+        if (bubbleStyle === 'square') {
+            root.style.setProperty(CSS_VARS.BUBBLE_RADIUS, '0');
+            root.style.setProperty(CSS_VARS.BUBBLE_BG, 'inherit');
+            root.style.setProperty(CSS_VARS.BUBBLE_BORDER, 'inherit');
+            root.style.setProperty(CSS_VARS.BUBBLE_SHADOW, 'inherit');
+        } else if (bubbleStyle === 'minimal') {
+            root.style.setProperty(CSS_VARS.BUBBLE_RADIUS, '0');
+            root.style.setProperty(CSS_VARS.BUBBLE_BG, 'transparent');
+            root.style.setProperty(CSS_VARS.BUBBLE_BORDER, 'none');
+            root.style.setProperty(CSS_VARS.BUBBLE_SHADOW, 'none');
+        } else {
+            // Default 'rounded' style - inherit from Claude's styles
+            root.style.setProperty(CSS_VARS.BUBBLE_RADIUS, 'inherit');
+            root.style.setProperty(CSS_VARS.BUBBLE_BG, 'inherit');
+            root.style.setProperty(CSS_VARS.BUBBLE_BORDER, 'inherit');
+            root.style.setProperty(CSS_VARS.BUBBLE_SHADOW, 'inherit');
+        }
+
+        // Mark document as having enhanced styles active
+        root.setAttribute('data-claude-enhanced-active', 'true');
+
+        console.log('[Claude Width] CSS variables updated');
+    }
+
+    /**
+     * Clear CSS custom properties from :root.
+     */
+    function clearCSSVariables() {
+        const root = document.documentElement;
+
+        Object.values(CSS_VARS).forEach(varName => {
+            root.style.removeProperty(varName);
+        });
+
+        root.removeAttribute('data-claude-enhanced-active');
+        console.log('[Claude Width] CSS variables cleared');
+    }
+
+    /**
      * Inject or update enhanced styling CSS.
+     * Uses CSS custom properties approach - the stylesheet is static,
+     * and updateCSSVariables() handles dynamic value updates on :root.
      */
     function injectEnhancedCSS() {
         let styleElement = document.getElementById(ENHANCED_STYLE_ID);
-        const css = generateEnhancedCSS();
 
-        if (styleElement) {
-            styleElement.textContent = css;
-        } else {
+        // Only inject the stylesheet once - it uses CSS variables that we update dynamically
+        if (!styleElement) {
+            const css = generateEnhancedCSS();
             styleElement = document.createElement('style');
             styleElement.id = ENHANCED_STYLE_ID;
             styleElement.type = 'text/css';
@@ -434,160 +810,41 @@
             if (head) {
                 head.appendChild(styleElement);
             }
+            console.log('[Claude Width] Enhanced CSS stylesheet injected');
         }
 
-        // Also apply inline styles to existing elements for maximum specificity
-        applyEnhancedInlineStyles();
+        // Update CSS custom properties on :root (much more efficient than inline styles)
+        updateCSSVariables();
 
-        console.log('[Claude Width] Enhanced CSS injected/updated');
+        console.log('[Claude Width] Enhanced styling applied via CSS variables');
     }
 
     /**
-     * Apply enhanced styling via inline styles for maximum specificity.
-     * This ensures styles override Claude's React-generated styles.
+     * Apply enhanced styling.
+     * REFACTORED in v1.8.2: Now uses CSS custom properties instead of inline styles.
+     * This is more efficient as it only updates :root variables, not individual elements.
+     *
+     * @deprecated Use updateCSSVariables() directly for new code.
      */
     function applyEnhancedInlineStyles() {
-        const settings = enhancedSettings;
-        const fontSizePercent = settings.fontSizePercent || ENHANCED_DEFAULTS.fontSizePercent;
-        const lineHeightValue = LINE_HEIGHT_VALUES[settings.lineHeight] || LINE_HEIGHT_VALUES.normal;
-        const messagePaddingValue = MESSAGE_PADDING_VALUES[settings.messagePadding] || MESSAGE_PADDING_VALUES.medium;
-        const codeBlockHeight = settings.codeBlockMaxHeight;
-        const codeBlockWrap = settings.codeBlockWordWrap;
-        const showAvatars = settings.showAvatars;
-        const showTimestamps = settings.showTimestamps;
-        const bubbleStyle = settings.messageBubbleStyle;
-
-        let styledCount = 0;
-
-        // Apply typography styles to text elements
-        MESSAGE_TEXT_SELECTORS.forEach(selector => {
-            try {
-                document.querySelectorAll(selector).forEach(el => {
-                    if (isInsideSidebar(el)) return;
-                    el.style.setProperty('font-size', `${fontSizePercent}%`, 'important');
-                    el.style.setProperty('line-height', String(lineHeightValue), 'important');
-                    el.setAttribute('data-claude-enhanced-applied', 'true');
-                    styledCount++;
-                });
-            } catch (e) {
-                // Selector might be invalid
-            }
-        });
-
-        // Apply padding to message containers
-        MESSAGE_CONTAINER_SELECTORS.forEach(selector => {
-            try {
-                document.querySelectorAll(selector).forEach(el => {
-                    if (isInsideSidebar(el)) return;
-                    el.style.setProperty('padding', `${messagePaddingValue}px`, 'important');
-
-                    // Apply bubble style
-                    if (bubbleStyle === 'square') {
-                        el.style.setProperty('border-radius', '0', 'important');
-                    } else if (bubbleStyle === 'minimal') {
-                        el.style.setProperty('border-radius', '0', 'important');
-                        el.style.setProperty('background', 'transparent', 'important');
-                        el.style.setProperty('border', 'none', 'important');
-                        el.style.setProperty('box-shadow', 'none', 'important');
-                    }
-
-                    el.setAttribute('data-claude-enhanced-applied', 'true');
-                    styledCount++;
-                });
-            } catch (e) {
-                // Selector might be invalid
-            }
-        });
-
-        // Apply code block styles
-        CODE_BLOCK_SELECTORS.forEach(selector => {
-            try {
-                document.querySelectorAll(selector).forEach(el => {
-                    if (isInsideSidebar(el)) return;
-
-                    // Max height
-                    if (codeBlockHeight > 0) {
-                        el.style.setProperty('max-height', `${codeBlockHeight}px`, 'important');
-                        el.style.setProperty('overflow-y', 'auto', 'important');
-                    } else {
-                        el.style.setProperty('max-height', 'none', 'important');
-                    }
-
-                    // Word wrap
-                    if (codeBlockWrap) {
-                        el.style.setProperty('white-space', 'pre-wrap', 'important');
-                        el.style.setProperty('word-wrap', 'break-word', 'important');
-                        el.style.setProperty('overflow-wrap', 'break-word', 'important');
-                    }
-
-                    el.setAttribute('data-claude-enhanced-applied', 'true');
-                    styledCount++;
-                });
-            } catch (e) {
-                // Selector might be invalid
-            }
-        });
-
-        // Handle avatar visibility
-        if (!showAvatars) {
-            AVATAR_SELECTORS.forEach(selector => {
-                try {
-                    document.querySelectorAll(selector).forEach(el => {
-                        if (isInsideSidebar(el)) return;
-                        el.style.setProperty('display', 'none', 'important');
-                        el.setAttribute('data-claude-enhanced-applied', 'true');
-                        styledCount++;
-                    });
-                } catch (e) {
-                    // Selector might be invalid
-                }
-            });
-        }
-
-        // Handle timestamp visibility
-        if (!showTimestamps) {
-            TIMESTAMP_SELECTORS.forEach(selector => {
-                try {
-                    document.querySelectorAll(selector).forEach(el => {
-                        if (isInsideSidebar(el)) return;
-                        el.style.setProperty('display', 'none', 'important');
-                        el.setAttribute('data-claude-enhanced-applied', 'true');
-                        styledCount++;
-                    });
-                } catch (e) {
-                    // Selector might be invalid
-                }
-            });
-        }
-
-        console.log(`[Claude Width] Applied enhanced inline styles to ${styledCount} elements`);
+        // Redirect to CSS variables approach - much more efficient
+        updateCSSVariables();
     }
 
     /**
-     * Clear all enhanced inline styles.
+     * Clear all enhanced styling.
+     * REFACTORED in v1.8.2: Now clears CSS custom properties from :root.
+     *
+     * @deprecated Use clearCSSVariables() directly for new code.
      */
     function clearEnhancedInlineStyles() {
-        document.querySelectorAll('[data-claude-enhanced-applied]').forEach(el => {
-            // Remove style properties we set
-            el.style.removeProperty('font-size');
-            el.style.removeProperty('line-height');
-            el.style.removeProperty('padding');
-            el.style.removeProperty('border-radius');
-            el.style.removeProperty('background');
-            el.style.removeProperty('border');
-            el.style.removeProperty('box-shadow');
-            el.style.removeProperty('max-height');
-            el.style.removeProperty('overflow-y');
-            el.style.removeProperty('white-space');
-            el.style.removeProperty('word-wrap');
-            el.style.removeProperty('overflow-wrap');
-            el.style.removeProperty('display');
-            el.removeAttribute('data-claude-enhanced-applied');
-        });
+        // Redirect to CSS variables approach
+        clearCSSVariables();
     }
 
     /**
-     * Debounced version of applyEnhancedInlineStyles.
+     * Debounced version of enhanced style application.
+     * Uses CSS variables for efficient updates.
      */
     let enhancedStyleDebounceTimer = null;
     function applyEnhancedInlineStylesDebounced() {
@@ -595,7 +852,7 @@
             clearTimeout(enhancedStyleDebounceTimer);
         }
         enhancedStyleDebounceTimer = setTimeout(() => {
-            applyEnhancedInlineStyles();
+            updateCSSVariables();
         }, TIMING.DEBOUNCE_MS);
     }
 
@@ -687,14 +944,12 @@
 
     /**
      * Toggle collapse state of all code blocks.
+     * Uses cached CODE_BLOCK_SELECTOR and processNonSidebarElements for optimization.
+     *
      * @param {boolean} collapse - Whether to collapse
      */
     function toggleAllCodeBlocks(collapse) {
-        const codeBlocks = document.querySelectorAll('pre, [class*="CodeBlock"], [class*="code-block"]');
-
-        codeBlocks.forEach(block => {
-            if (isInsideSidebar(block)) return;
-
+        processNonSidebarElements(CODE_BLOCK_SELECTOR, block => {
             if (collapse) {
                 block.style.maxHeight = '100px';
                 block.style.overflow = 'hidden';
@@ -814,6 +1069,10 @@
 
     /**
      * Find and style all relevant elements in the chat area.
+     * Uses consolidated selectors for performance optimization.
+     *
+     * OPTIMIZATION: Previous implementation used 8 separate querySelectorAll calls.
+     * Now uses 4 combined calls using cached selector strings, reducing DOM queries.
      *
      * @param {number} widthPercent - Width percentage to apply
      */
@@ -827,71 +1086,39 @@
 
         let elementCount = 0;
 
-        // Strategy: Target elements that contain "mx-auto" which is Tailwind's
-        // margin-auto centering class - these are the containers with max-width
-        document.querySelectorAll('[class*="mx-auto"]').forEach(el => {
-            if (!isInsideSidebar(el)) {
-                styleElement(el, clampedWidth, true);
-                elementCount++;
-            }
+        // CONTAINER ELEMENTS (need max-width, width, and margin centering)
+        // Uses WIDTH_CONTAINER_SELECTOR: mx-auto, form, Composer
+        elementCount += processNonSidebarElements(WIDTH_CONTAINER_SELECTOR, el => {
+            styleElement(el, clampedWidth, true);
         });
 
-        // Target form elements (the composer/input area)
-        document.querySelectorAll('form').forEach(el => {
-            if (!isInsideSidebar(el)) {
-                styleElement(el, clampedWidth, true);
-                elementCount++;
-            }
+        // STICKY ELEMENTS (special handling for child divs)
+        // Sticky footer containers often wrap the input area
+        processNonSidebarElements('[class*="sticky"]', el => {
+            elementCount += processNonSidebarElements(':scope > div', child => {
+                styleElement(child, clampedWidth, true);
+            }, el);
         });
 
-        // Target elements with Composer in class name
-        document.querySelectorAll('[class*="Composer"], [class*="composer"]').forEach(el => {
-            if (!isInsideSidebar(el)) {
-                styleElement(el, clampedWidth, true);
-                elementCount++;
-            }
+        // CONTENT ELEMENTS (only need max-width, no centering)
+        // Uses WIDTH_CONTENT_SELECTOR: Message, Thread, Conversation
+        elementCount += processNonSidebarElements(WIDTH_CONTENT_SELECTOR, el => {
+            styleElement(el, clampedWidth, false);
         });
 
-        // Target sticky footer containers (where input usually is)
-        document.querySelectorAll('[class*="sticky"]').forEach(el => {
-            if (!isInsideSidebar(el)) {
-                // Style child divs of sticky elements
-                el.querySelectorAll(':scope > div').forEach(child => {
-                    if (!isInsideSidebar(child)) {
-                        styleElement(child, clampedWidth, true);
-                        elementCount++;
-                    }
-                });
-            }
-        });
-
-        // Target message containers - just max-width, not full width
-        document.querySelectorAll('[class*="Message"], [class*="message"]').forEach(el => {
-            if (!isInsideSidebar(el)) {
-                styleElement(el, clampedWidth, false);
-                elementCount++;
-            }
-        });
-
-        // Target thread/conversation containers
-        document.querySelectorAll('[class*="Thread"], [class*="thread"], [class*="Conversation"], [class*="conversation"]').forEach(el => {
-            if (!isInsideSidebar(el)) {
-                styleElement(el, clampedWidth, false);
-                elementCount++;
-            }
-        });
-
-        // Target prose/markdown content - let it fill container
-        document.querySelectorAll('.prose, [class*="prose"], [class*="Markdown"], [class*="markdown"]').forEach(el => {
-            if (!isInsideSidebar(el) && el.style) {
+        // PROSE/MARKDOWN ELEMENTS (fill their container)
+        // Uses PROSE_SELECTOR: .prose, prose-*, Markdown
+        processNonSidebarElements(PROSE_SELECTOR, el => {
+            if (el.style) {
                 el.style.maxWidth = '100%';
                 styledElements.add(el);
             }
         });
 
-        // Target code blocks - let them expand
-        document.querySelectorAll('pre, [class*="CodeBlock"], [class*="code-block"]').forEach(el => {
-            if (!isInsideSidebar(el) && el.style) {
+        // CODE BLOCKS (fill container, enable horizontal scroll)
+        // Uses CODE_BLOCK_SELECTOR: pre, CodeBlock
+        processNonSidebarElements(CODE_BLOCK_SELECTOR, el => {
+            if (el.style) {
                 el.style.maxWidth = '100%';
                 el.style.overflowX = 'auto';
                 styledElements.add(el);
@@ -1096,94 +1323,90 @@
     // DOM OBSERVATION
     // =========================================================================
 
+    /**
+     * Process a MutationObserver mutation to determine if styling updates are needed.
+     * Extracted from the callback for better readability and testability.
+     *
+     * @param {MutationRecord} mutation - The mutation record to process
+     * @returns {{needsWidth: boolean, needsEnhanced: boolean}} Update flags
+     */
+    function processMutation(mutation) {
+        let needsWidth = false;
+        let needsEnhanced = false;
+
+        if (mutation.type !== 'childList' || mutation.addedNodes.length === 0) {
+            return { needsWidth, needsEnhanced };
+        }
+
+        for (const node of mutation.addedNodes) {
+            if (node.nodeType !== Node.ELEMENT_NODE) continue;
+
+            // Use cached selectors via helper functions for efficient checking
+            if (!needsWidth && isWidthRelevant(node)) {
+                needsWidth = true;
+            }
+
+            if (!needsEnhanced && isEnhancedRelevant(node)) {
+                needsEnhanced = true;
+            }
+
+            // Early exit if both flags are set
+            if (needsWidth && needsEnhanced) break;
+        }
+
+        return { needsWidth, needsEnhanced };
+    }
+
+    /**
+     * Handle MutationObserver mutations.
+     * Determines which style updates are needed and applies them with debouncing.
+     *
+     * @param {MutationRecord[]} mutations - Array of mutation records
+     */
+    function handleMutations(mutations) {
+        let needsWidthUpdate = false;
+        let needsEnhancedUpdate = false;
+
+        // Process mutations to determine needed updates
+        for (const mutation of mutations) {
+            const result = processMutation(mutation);
+
+            if (result.needsWidth) needsWidthUpdate = true;
+            if (result.needsEnhanced) needsEnhancedUpdate = true;
+
+            // Early exit if both flags are set
+            if (needsWidthUpdate && needsEnhancedUpdate) break;
+        }
+
+        // Apply updates as needed (debounced)
+        if (needsWidthUpdate) {
+            applyWidthDebounced(currentWidth);
+        }
+
+        if (needsEnhancedUpdate) {
+            applyEnhancedInlineStylesDebounced();
+        }
+
+        // Ensure our style elements exist (may be removed by page updates)
+        if (!document.getElementById(STYLE_ELEMENT_ID)) {
+            injectMinimalCSS();
+        }
+        if (!document.getElementById(ENHANCED_STYLE_ID)) {
+            injectEnhancedCSS();
+        }
+    }
+
+    /**
+     * Set up the MutationObserver for dynamic content.
+     * Claude.ai is a React SPA that dynamically loads content,
+     * so we need to watch for new elements to style.
+     */
     function setupDOMObserver() {
         if (domObserver) {
             domObserver.disconnect();
         }
 
-        domObserver = new MutationObserver((mutations) => {
-            let needsWidthUpdate = false;
-            let needsEnhancedUpdate = false;
-
-            for (const mutation of mutations) {
-                if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
-                    for (const node of mutation.addedNodes) {
-                        if (node.nodeType === Node.ELEMENT_NODE) {
-                            // Check if new element might need width styling
-                            const isWidthRelevant = node.matches && (
-                                node.matches('[class*="mx-auto"]') ||
-                                node.matches('[class*="Message"]') ||
-                                node.matches('[class*="Composer"]') ||
-                                node.matches('form')
-                            );
-
-                            const hasWidthRelevantChild = node.querySelector && (
-                                node.querySelector('[class*="mx-auto"]') ||
-                                node.querySelector('[class*="Message"]') ||
-                                node.querySelector('[class*="Composer"]') ||
-                                node.querySelector('form')
-                            );
-
-                            if (isWidthRelevant || hasWidthRelevantChild) {
-                                needsWidthUpdate = true;
-                            }
-
-                            // Check if new element might need enhanced styling
-                            const isEnhancedRelevant = node.matches && (
-                                node.matches('.prose') ||
-                                node.matches('[class*="prose"]') ||
-                                node.matches('[class*="Message"]') ||
-                                node.matches('[class*="message"]') ||
-                                node.matches('pre') ||
-                                node.matches('[class*="CodeBlock"]') ||
-                                node.matches('[class*="avatar" i]') ||
-                                node.matches('[class*="Avatar"]') ||
-                                node.matches('time') ||
-                                node.matches('[class*="timestamp" i]')
-                            );
-
-                            const hasEnhancedRelevantChild = node.querySelector && (
-                                node.querySelector('.prose') ||
-                                node.querySelector('[class*="prose"]') ||
-                                node.querySelector('[class*="Message"]') ||
-                                node.querySelector('pre') ||
-                                node.querySelector('[class*="CodeBlock"]') ||
-                                node.querySelector('[class*="avatar" i]') ||
-                                node.querySelector('[class*="Avatar"]') ||
-                                node.querySelector('time')
-                            );
-
-                            if (isEnhancedRelevant || hasEnhancedRelevantChild) {
-                                needsEnhancedUpdate = true;
-                            }
-
-                            // If both need updates, no need to continue checking
-                            if (needsWidthUpdate && needsEnhancedUpdate) {
-                                break;
-                            }
-                        }
-                    }
-                }
-                if (needsWidthUpdate && needsEnhancedUpdate) break;
-            }
-
-            // Apply updates as needed
-            if (needsWidthUpdate) {
-                applyWidthDebounced(currentWidth);
-            }
-
-            if (needsEnhancedUpdate) {
-                applyEnhancedInlineStylesDebounced();
-            }
-
-            // Ensure our style elements exist
-            if (!document.getElementById(STYLE_ELEMENT_ID)) {
-                injectMinimalCSS();
-            }
-            if (!document.getElementById(ENHANCED_STYLE_ID)) {
-                injectEnhancedCSS();
-            }
-        });
+        domObserver = new MutationObserver(handleMutations);
 
         domObserver.observe(document.documentElement, {
             childList: true,
@@ -1273,7 +1496,7 @@
     // =========================================================================
 
     async function initialize() {
-        console.log('[Claude Width] Initializing content script v1.8.1...');
+        console.log('[Claude Width] Initializing content script v1.8.2...');
 
         try {
             // Load saved width preference

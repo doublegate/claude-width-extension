@@ -24,9 +24,10 @@
  * - Visible focus indicators for keyboard navigation
  *
  * @author DoubleGate
- * @version 1.8.1
+ * @version 1.8.2
  *
  * Changelog:
+ * - v1.8.2: Technical debt remediation, comprehensive test suite
  * - v1.8.1: Fixed real-time enhanced styling updates
  * - v1.8.0: Enhanced styling - advanced sections, collapsibles, reset all styles
  * - v1.7.0: Custom presets, drag-drop, favorites, recently used, edit modal

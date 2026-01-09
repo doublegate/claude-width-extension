@@ -1,0 +1,32 @@
+{
+  "name": "claude-width-extension",
+  "version": "1.8.2",
+  "description": "Firefox extension to customize chat width on claude.ai",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "test:ui": "vitest --ui",
+    "lint": "eslint lib/ popup/ content/ background/ options/",
+    "lint:fix": "eslint --fix lib/ popup/ content/ background/ options/",
+    "check": "node --check lib/constants.js && node --check popup/popup.js && node --check content/content.js && node --check background/background.js && node --check options/options.js"
+  },
+  "devDependencies": {
+    "@vitest/coverage-v8": "^2.1.0",
+    "@vitest/ui": "^2.1.0",
+    "eslint": "^9.15.0",
+    "jsdom": "^25.0.0",
+    "vitest": "^2.1.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "author": "DoubleGate",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/doublegate/claude-width-extension"
+  }
+}

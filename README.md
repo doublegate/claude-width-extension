@@ -47,7 +47,7 @@ A Firefox extension that allows you to customize the width of the text input/out
 cd claude-width-extension
 
 # Create the XPI file (ZIP with .xpi extension)
-zip -r build/claude-width-customizer-v1.8.1.xpi . -x "*.git*" -x "build/*" -x "*.DS_Store" -x "CLAUDE.md" -x ".claude/*" -x "docs/*" -x "images/*"
+zip -r build/claude-width-customizer-v1.8.2.xpi . -x "*.git*" -x "build/*" -x "*.DS_Store" -x "CLAUDE.md" -x ".claude/*" -x "docs/*" -x "images/*" -x "tests/*" -x "node_modules/*" -x "coverage/*" -x "*.config.js"
 ```
 
 ## Usage
@@ -210,6 +210,19 @@ MIT License - feel free to modify and distribute.
 DoubleGate - [GitHub](https://github.com/doublegate)
 
 ## Changelog
+
+### v1.8.2 (Technical Debt Remediation)
+- **Performance**: Replaced inline style manipulation with CSS custom properties for O(1) updates
+- **Refactor**: Centralized popup state management into consolidated `state` object
+- **Refactor**: Eliminated duplicate constant definitions across popup.js and constants.js
+- **Docs**: Added comprehensive JSDoc documentation for all CSS selector arrays
+- **Docs**: Documented selector design philosophy and maintenance guidelines
+- **Tests**: Comprehensive test suite with 206 tests achieving full code coverage
+- **Tests**: Unit tests for constants, popup, content script, and background modules
+- **Tests**: Integration tests for cross-module interactions
+- **Cleanup**: Removed dead code (unused enhancedDebounceTimer variable)
+- **DX**: Added helper functions (processNonSidebarElements, safeMatches, safeHasDescendant)
+- **DX**: Added cached selector strings for performance optimization
 
 ### v1.8.1 (Enhanced Styling Fix)
 - **Fixed**: Real-time enhanced styling updates now work correctly

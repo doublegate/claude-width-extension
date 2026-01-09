@@ -2,7 +2,7 @@
  * Claude Chat Width Customizer - Base Content Styles
  * ===================================================
  *
- * Version 1.8.1 - Enhanced Styling Fix
+ * Version 1.8.2 - Technical Debt Remediation
  *
  * The JavaScript content script handles all width adjustments using inline styles.
  * This CSS file provides smooth transitions for elements that have been
@@ -14,7 +14,7 @@
  * - Visual element transitions (opacity for show/hide)
  *
  * @author DoubleGate
- * @version 1.8.1
+ * @version 1.8.2
  */
 
 /*
@@ -34,7 +34,7 @@
  * Typography transitions for smooth font-size, line-height, and padding changes.
  * Applied to message containers and chat elements.
  */
-[data-claude-enhanced-styles] {
+[data-claude-enhanced-applied] {
     transition:
         font-size 0.2s ease-out,
         line-height 0.2s ease-out,
@@ -46,8 +46,8 @@
  * Code block transitions for max-height and collapse animations.
  * Enables smooth expand/collapse behavior.
  */
-[data-claude-enhanced-styles] pre,
-[data-claude-enhanced-styles] code {
+[data-claude-enhanced-applied] pre,
+[data-claude-enhanced-applied] code {
     transition:
         max-height 0.3s ease-out,
         overflow 0.3s ease-out;
@@ -56,15 +56,15 @@
 /**
  * Visual element transitions for smooth show/hide of timestamps and avatars.
  */
-[data-claude-enhanced-styles] [class*="timestamp" i],
-[data-claude-enhanced-styles] [class*="avatar" i] {
+[data-claude-enhanced-applied] [class*="timestamp" i],
+[data-claude-enhanced-applied] [class*="avatar" i] {
     transition: opacity 0.2s ease-out, visibility 0.2s ease-out;
 }
 
 /**
  * Message bubble style transitions for border-radius and background changes.
  */
-[data-claude-enhanced-styles] [class*="message" i] {
+[data-claude-enhanced-applied] [class*="message" i] {
     transition:
         border-radius 0.2s ease-out,
         background-color 0.2s ease-out,
@@ -82,12 +82,12 @@
  */
 @media (prefers-reduced-motion: reduce) {
     [data-claude-width-applied],
-    [data-claude-enhanced-styles],
-    [data-claude-enhanced-styles] pre,
-    [data-claude-enhanced-styles] code,
-    [data-claude-enhanced-styles] [class*="timestamp" i],
-    [data-claude-enhanced-styles] [class*="avatar" i],
-    [data-claude-enhanced-styles] [class*="message" i] {
+    [data-claude-enhanced-applied],
+    [data-claude-enhanced-applied] pre,
+    [data-claude-enhanced-applied] code,
+    [data-claude-enhanced-applied] [class*="timestamp" i],
+    [data-claude-enhanced-applied] [class*="avatar" i],
+    [data-claude-enhanced-applied] [class*="message" i] {
         transition: none !important;
     }
 }

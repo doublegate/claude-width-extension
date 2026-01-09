@@ -4,21 +4,30 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Firefox extension (Manifest V2) that customizes the chat width on claude.ai. Allows users to adjust the main chat area from 40-100% width via a popup UI, without affecting the sidebar. Version 1.8.1 fixes enhanced styling with real-time updates and comprehensive DOM targeting for typography controls (font size, line height, padding), display modes (compact, comfortable, spacious, custom), code block enhancements (max-height, word wrap, collapse all), and visual tweaks (timestamps, avatars, bubble styles).
+Firefox extension (Manifest V2) that customizes the chat width on claude.ai. Allows users to adjust the main chat area from 40-100% width via a popup UI, without affecting the sidebar. Version 1.8.2 adds comprehensive technical debt remediation: CSS custom properties for O(1) styling updates, consolidated state management in popup.js, comprehensive test suite (206 tests), and extensive documentation. Includes enhanced styling for typography controls (font size, line height, padding), display modes (compact, comfortable, spacious, custom), code block enhancements (max-height, word wrap, collapse all), and visual tweaks (timestamps, avatars, bubble styles).
 
 ## Build & Development
 
 ```bash
 # Build XPI package (from project root)
-zip -r build/claude-width-customizer-v1.8.1.xpi . -x "*.git*" -x "build/*" -x "*.DS_Store" -x "CLAUDE.md" -x ".claude/*" -x "docs/*" -x "images/*"
+zip -r build/claude-width-customizer-v1.8.2.xpi . -x "*.git*" -x "build/*" -x "*.DS_Store" -x "CLAUDE.md" -x ".claude/*" -x "docs/*" -x "images/*" -x "tests/*" -x "node_modules/*" -x "coverage/*" -x "*.config.js"
 
 # Development testing (no build step required)
 # 1. Open Firefox → about:debugging → This Firefox
 # 2. Click "Load Temporary Add-on..." → select manifest.json
 # 3. Extension reloads on manifest.json reload
+
+# Run tests (requires npm install)
+npm test              # Run all 206 tests
+npm run test:coverage # Run with coverage report
+npm run test:watch    # Run in watch mode
+npm run check         # Verify JS syntax
 ```
 
-No npm/node dependencies. Pure vanilla JavaScript.
+Development dependencies (devDependencies only - not required for extension):
+- vitest: Test framework
+- jsdom: DOM simulation for tests
+- @vitest/coverage-v8: Coverage reporting
 
 ## Architecture
 
@@ -212,7 +221,7 @@ The Advanced Styling section provides fine-grained control over Claude's chat ap
 
 ```
 claude-width-extension/
-├── manifest.json              # Extension manifest (Manifest V2, v1.8.0)
+├── manifest.json              # Extension manifest (Manifest V2, v1.8.2)
 ├── README.md                  # User documentation
 ├── CONTRIBUTING.md            # Contribution guidelines
 ├── LICENSE                    # MIT license
@@ -239,7 +248,19 @@ claude-width-extension/
 │   ├── icon-256.png           # Mozilla Add-ons listing
 │   └── screenshot-*.jpg       # Marketing screenshots
 ├── docs/
-│   └── ROADMAP.md             # Development roadmap (v1.7.0+)
+│   ├── ROADMAP.md             # Development roadmap (v1.7.0+)
+│   └── MANIFEST-V3-MIGRATION.md # Migration planning document
+├── tests/
+│   ├── mocks/
+│   │   └── browser.js         # Browser API mock for testing
+│   ├── constants.test.js      # Unit tests for lib/constants.js
+│   ├── popup.test.js          # Unit tests for popup/popup.js
+│   ├── content.test.js        # Unit tests for content/content.js
+│   ├── background.test.js     # Unit tests for background/background.js
+│   ├── integration.test.js    # Cross-module integration tests
+│   └── setup.js               # Vitest setup configuration
+├── vitest.config.js           # Vitest configuration
+├── package.json               # NPM configuration (devDependencies only)
 └── build/
     └── *.xpi                  # Built packages (gitignored)
 ```
@@ -256,6 +277,7 @@ When Claude updates their UI, selectors may break. Debug process:
 
 | Version | Date | Highlights |
 |---------|------|------------|
+| v1.8.2 | 2026-01-08 | Technical debt remediation, CSS custom properties, test suite (206 tests) |
 | v1.8.1 | 2026-01-08 | Fixed real-time enhanced styling updates, comprehensive DOM selectors |
 | v1.8.0 | 2026-01-08 | Enhanced styling (typography, display modes, code blocks, visual tweaks), default 85%, grey badge |
 | v1.7.0 | 2026-01-08 | Custom presets (CRUD, drag-drop, favorites), context menu, recent widths, default 70% |

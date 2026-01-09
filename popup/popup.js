@@ -27,10 +27,11 @@
  * - Alt+Up/Down: Reorder custom presets
  *
  * @author DoubleGate
- * @version 1.8.1
+ * @version 1.8.2
  * @license MIT
  *
  * Changelog:
+ * - v1.8.2: Technical debt remediation, CSS custom properties, state consolidation
  * - v1.8.1: Fixed real-time enhanced styling updates
  * - v1.8.0: Enhanced styling - typography, display modes, code blocks, visual tweaks, default 85%
  * - v1.7.0: Custom presets, drag-and-drop, favorites, recent widths, default 70%
@@ -67,25 +68,25 @@
 
     /**
      * Preset width configurations mapped by keyboard key.
+     * Derived from BUILT_IN_PRESETS to avoid duplication.
+     * Keys 1-4 map to the first 4 built-in presets.
      * @type {Object<string, {width: number, name: string}>}
      */
-    const PRESET_KEYS = {
-        '1': { width: 50, name: 'Narrow' },
-        '2': { width: 70, name: 'Medium' },
-        '3': { width: 85, name: 'Wide' },
-        '4': { width: 100, name: 'Full' }
-    };
+    const PRESET_KEYS = BUILT_IN_PRESETS.reduce((acc, preset, index) => {
+        const key = String(index + 1);
+        acc[key] = { width: preset.width, name: preset.name };
+        return acc;
+    }, {});
 
     /**
      * Preset names by width value.
+     * Derived from BUILT_IN_PRESETS to avoid duplication.
      * @type {Object<number, string>}
      */
-    const PRESETS = {
-        50: 'Narrow',
-        70: 'Medium',
-        85: 'Wide',
-        100: 'Full'
-    };
+    const PRESETS = BUILT_IN_PRESETS.reduce((acc, preset) => {
+        acc[preset.width] = preset.name;
+        return acc;
+    }, {});
 
     /**
      * Theme display names for announcements.
@@ -218,74 +219,56 @@
     let recentlyUsedList;
 
     // =========================================================================
-    // STATE
+    // CONSOLIDATED STATE MANAGEMENT
     // =========================================================================
 
     /**
-     * Currently selected width (may differ from saved if user is previewing).
-     * @type {number}
-     */
-    let selectedWidth = DEFAULT_WIDTH;
-
-    /**
-     * Last saved/applied width (used to detect unsaved changes).
-     * @type {number}
-     */
-    let savedWidth = DEFAULT_WIDTH;
-
-    /**
-     * Whether user is currently on a claude.ai tab.
-     * @type {boolean}
-     */
-    let isOnClaudeTab = false;
-
-    /**
-     * Current theme preference.
-     * @type {string}
-     */
-    let currentTheme = DEFAULT_THEME;
-
-    /**
-     * All focusable elements in the popup (for focus trap).
-     * @type {HTMLElement[]}
-     */
-    let focusableElements = [];
-
-    /**
-     * Custom presets array.
-     * @type {Array<{id: string, name: string, width: number, favorite: boolean, order: number}>}
-     */
-    let customPresets = [];
-
-    /**
-     * Recently used widths.
-     * @type {number[]}
-     */
-    let recentWidths = [];
-
-    /**
-     * Currently editing preset ID.
-     * @type {string|null}
-     */
-    let editingPresetId = null;
-
-    /**
-     * Current drag target element.
-     * @type {HTMLElement|null}
-     */
-    let dragTarget = null;
-
-    /**
-     * Enhanced styling settings (v1.8.0).
+     * Centralized popup state object.
+     * Consolidates all popup state variables into a single object for:
+     * - Easier debugging (inspect state.* in console)
+     * - Better organization of related state
+     * - Clearer state initialization and reset patterns
+     * - Simplified state persistence if needed in future
+     *
      * @type {Object}
+     * @property {number} selectedWidth - Currently selected width (may differ from saved during preview)
+     * @property {number} savedWidth - Last saved/applied width (used to detect unsaved changes)
+     * @property {boolean} isOnClaudeTab - Whether user is currently on a claude.ai tab
+     * @property {string} currentTheme - Current theme preference ('light', 'dark', 'system')
+     * @property {HTMLElement[]} focusableElements - All focusable elements for focus trap
+     * @property {Array<Object>} customPresets - User's custom presets with id, name, width, favorite, order
+     * @property {number[]} recentWidths - Recently used width values
+     * @property {string|null} editingPresetId - ID of preset currently being edited, or null
+     * @property {HTMLElement|null} dragTarget - Current drag target element during drag-drop
+     * @property {Object} enhancedSettings - Enhanced styling settings (v1.8.0)
+     * @property {boolean} advancedExpanded - Whether advanced section is expanded
      */
-    let enhancedSettings = { ...ENHANCED_DEFAULTS };
+    const state = {
+        // Width state
+        selectedWidth: DEFAULT_WIDTH,
+        savedWidth: DEFAULT_WIDTH,
 
-    /**
-     * Whether advanced section is expanded.
-     * @type {boolean}
-     */
-    let advancedExpanded = false;
+        // Tab state
+        isOnClaudeTab: false,
+
+        // Theme state
+        currentTheme: DEFAULT_THEME,
+
+        // UI state
+        focusableElements: [],
+        advancedExpanded: false,
+
+        // Presets state
+        customPresets: [],
+        recentWidths: [],
+
+        // Interaction state (modal editing, drag-drop)
+        editingPresetId: null,
+        dragTarget: null,
+
+        // Enhanced styling state (v1.8.0)
+        enhancedSettings: { ...ENHANCED_DEFAULTS }
+    };
 
     // =========================================================================
     // INITIALIZATION
@@ -352,7 +335,7 @@
      */
     function cacheFocusableElements() {
         const selector = 'button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"]), details summary';
-        focusableElements = Array.from(document.querySelectorAll(selector))
+        state.focusableElements = Array.from(document.querySelectorAll(selector))
             .filter(el => !el.disabled && el.offsetParent !== null);
     }
 
@@ -489,7 +472,7 @@
      */
     function handleSliderInput(event) {
         const value = parseInt(event.target.value, 10);
-        selectedWidth = value;
+        state.selectedWidth = value;
         updateDisplay(value);
         updatePresetHighlight(value);
         updateUnsavedIndicator();
@@ -503,7 +486,7 @@
      */
     function handleSliderChange(event) {
         const value = parseInt(event.target.value, 10);
-        selectedWidth = value;
+        state.selectedWidth = value;
         // Auto-apply on change for better UX
         saveAndApplyWidth(value);
         announceChange(`Width set to ${value} percent`);
@@ -529,7 +512,7 @@
      * @param {number} width - Width value to set
      */
     function selectPreset(width) {
-        selectedWidth = width;
+        state.selectedWidth = width;
         sliderElement.value = width;
         updateDisplay(width);
         updatePresetHighlight(width);
@@ -547,16 +530,16 @@
      * Handle Apply button click.
      */
     function handleApplyClick() {
-        saveAndApplyWidth(selectedWidth);
+        saveAndApplyWidth(state.selectedWidth);
         showApplyFeedback();
-        announceChange(`Width applied: ${selectedWidth} percent`);
+        announceChange(`Width applied: ${state.selectedWidth} percent`);
     }
 
     /**
      * Handle Reset button click.
      */
     function handleResetClick() {
-        selectedWidth = DEFAULT_WIDTH;
+        state.selectedWidth = DEFAULT_WIDTH;
         sliderElement.value = DEFAULT_WIDTH;
         updateDisplay(DEFAULT_WIDTH);
         updatePresetHighlight(DEFAULT_WIDTH);
@@ -573,18 +556,18 @@
         // Add larger jumps with Page Up/Down
         if (event.key === 'PageUp') {
             event.preventDefault();
-            const newValue = Math.min(MAX_WIDTH, selectedWidth + 10);
+            const newValue = Math.min(MAX_WIDTH, state.selectedWidth + 10);
             sliderElement.value = newValue;
-            selectedWidth = newValue;
+            state.selectedWidth = newValue;
             updateDisplay(newValue);
             updatePresetHighlight(newValue);
             saveAndApplyWidth(newValue);
             announceChange(`Width set to ${newValue} percent`);
         } else if (event.key === 'PageDown') {
             event.preventDefault();
-            const newValue = Math.max(MIN_WIDTH, selectedWidth - 10);
+            const newValue = Math.max(MIN_WIDTH, state.selectedWidth - 10);
             sliderElement.value = newValue;
-            selectedWidth = newValue;
+            state.selectedWidth = newValue;
             updateDisplay(newValue);
             updatePresetHighlight(newValue);
             saveAndApplyWidth(newValue);
@@ -592,7 +575,7 @@
         } else if (event.key === 'Home') {
             event.preventDefault();
             sliderElement.value = MIN_WIDTH;
-            selectedWidth = MIN_WIDTH;
+            state.selectedWidth = MIN_WIDTH;
             updateDisplay(MIN_WIDTH);
             updatePresetHighlight(MIN_WIDTH);
             saveAndApplyWidth(MIN_WIDTH);
@@ -600,7 +583,7 @@
         } else if (event.key === 'End') {
             event.preventDefault();
             sliderElement.value = MAX_WIDTH;
-            selectedWidth = MAX_WIDTH;
+            state.selectedWidth = MAX_WIDTH;
             updateDisplay(MAX_WIDTH);
             updatePresetHighlight(MAX_WIDTH);
             saveAndApplyWidth(MAX_WIDTH);
@@ -694,8 +677,8 @@
             return;
         }
 
-        const firstElement = focusableElements[0];
-        const lastElement = focusableElements[focusableElements.length - 1];
+        const firstElement = state.focusableElements[0];
+        const lastElement = state.focusableElements[state.focusableElements.length - 1];
 
         if (event.shiftKey) {
             // Shift + Tab: going backwards
@@ -722,7 +705,7 @@
         const theme = button.dataset.theme;
 
         if (VALID_THEMES.includes(theme)) {
-            currentTheme = theme;
+            state.currentTheme = theme;
             applyTheme(theme);
             updateThemeButtons(theme);
             saveTheme(theme);
@@ -740,11 +723,11 @@
     async function loadCustomPresets() {
         try {
             const result = await browser.storage.local.get('customPresets');
-            customPresets = result.customPresets || [];
+            state.customPresets = result.customPresets || [];
             renderCustomPresets();
         } catch (error) {
             console.error('[Claude Width Popup] Error loading custom presets:', error);
-            customPresets = [];
+            state.customPresets = [];
             renderCustomPresets();
         }
     }
@@ -754,7 +737,7 @@
      */
     async function saveCustomPresets() {
         try {
-            await browser.storage.local.set({ customPresets: customPresets });
+            await browser.storage.local.set({ customPresets: state.customPresets });
             // Request context menu rebuild
             try {
                 await browser.runtime.sendMessage({ action: 'rebuildContextMenu' });
@@ -776,7 +759,7 @@
         customPresetsList.textContent = '';
 
         // Sort by order
-        const sorted = [...customPresets].sort((a, b) => (a.order || 0) - (b.order || 0));
+        const sorted = [...state.customPresets].sort((a, b) => (a.order || 0) - (b.order || 0));
 
         sorted.forEach((preset, index) => {
             const item = createCustomPresetItem(preset, index);
@@ -785,19 +768,19 @@
 
         // Update save button visibility
         if (saveCurrentBtn) {
-            saveCurrentBtn.disabled = customPresets.length >= MAX_CUSTOM_PRESETS;
+            saveCurrentBtn.disabled = state.customPresets.length >= MAX_CUSTOM_PRESETS;
         }
 
         // Update custom presets container visibility and empty state
         if (customPresetsContainer) {
-            const hasPresets = customPresets.length > 0;
+            const hasPresets = state.customPresets.length > 0;
             customPresetsContainer.classList.toggle('has-presets', hasPresets);
             customPresetsContainer.classList.toggle('empty', !hasPresets);
 
             // Update section header count
             const headerCount = customPresetsContainer.querySelector('.preset-count');
             if (headerCount) {
-                headerCount.textContent = `(${customPresets.length}/${MAX_CUSTOM_PRESETS})`;
+                headerCount.textContent = `(${state.customPresets.length}/${MAX_CUSTOM_PRESETS})`;
             }
         }
 
@@ -805,40 +788,94 @@
         cacheFocusableElements();
     }
 
+    // =========================================================================
+    // DOM ELEMENT FACTORY HELPERS (Extracted from createCustomPresetItem)
+    // =========================================================================
+
+    /**
+     * Create an SVG element with the specified attributes and path.
+     *
+     * @param {string} pathData - The SVG path data (d attribute)
+     * @param {Object} [options={}] - Optional settings
+     * @param {string} [options.viewBox='0 0 16 16'] - The viewBox attribute
+     * @param {string} [options.fill='currentColor'] - The fill color
+     * @returns {SVGElement} The created SVG element
+     */
+    function createSvgIcon(pathData, options = {}) {
+        const { viewBox = '0 0 16 16', fill = 'currentColor' } = options;
+
+        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svg.setAttribute('viewBox', viewBox);
+        svg.setAttribute('fill', fill);
+        svg.setAttribute('aria-hidden', 'true');
+
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        path.setAttribute('d', pathData);
+        svg.appendChild(path);
+
+        return svg;
+    }
+
+    /**
+     * Create an icon button with SVG icon.
+     *
+     * @param {Object} options - Button configuration
+     * @param {string} options.className - CSS class name
+     * @param {string} options.ariaLabel - ARIA label for accessibility
+     * @param {string} options.title - Tooltip text
+     * @param {string} options.iconPath - SVG path data
+     * @returns {HTMLButtonElement} The created button element
+     */
+    function createIconButton({ className, ariaLabel, title, iconPath }) {
+        const btn = document.createElement('button');
+        btn.className = className;
+        btn.type = 'button';
+        btn.setAttribute('aria-label', ariaLabel);
+        btn.title = title;
+        btn.appendChild(createSvgIcon(iconPath));
+        return btn;
+    }
+
+    // SVG path constants for commonly used icons
+    const SVG_PATHS = {
+        drag: 'M2 4h12v1H2V4zm0 3.5h12v1H2v-1zm0 3.5h12v1H2v-1z',
+        edit: 'M11.013 1.427a1.75 1.75 0 012.474 0l1.086 1.086a1.75 1.75 0 010 2.474l-8.61 8.61c-.21.21-.47.364-.756.445l-3.251.93a.75.75 0 01-.927-.928l.929-3.25a1.75 1.75 0 01.445-.758l8.61-8.61zm1.414 1.06a.25.25 0 00-.354 0L10.811 3.75l1.439 1.44 1.263-1.263a.25.25 0 000-.354l-1.086-1.086zM11.189 6.25L9.75 4.81l-6.286 6.287a.25.25 0 00-.064.108l-.558 1.953 1.953-.558a.25.25 0 00.108-.064l6.286-6.286z',
+        starFilled: 'M8 .25a.75.75 0 01.673.418l1.882 3.815 4.21.612a.75.75 0 01.416 1.279l-3.046 2.97.719 4.192a.75.75 0 01-1.088.791L8 12.347l-3.766 1.98a.75.75 0 01-1.088-.79l.72-4.194L.818 6.374a.75.75 0 01.416-1.28l4.21-.611L7.327.668A.75.75 0 018 .25z',
+        starOutline: 'M8 .25a.75.75 0 01.673.418l1.882 3.815 4.21.612a.75.75 0 01.416 1.279l-3.046 2.97.719 4.192a.75.75 0 01-1.088.791L8 12.347l-3.766 1.98a.75.75 0 01-1.088-.79l.72-4.194L.818 6.374a.75.75 0 01.416-1.28l4.21-.611L7.327.668A.75.75 0 018 .25zm0 2.445L6.615 5.5a.75.75 0 01-.564.41l-3.097.45 2.24 2.184a.75.75 0 01.216.664l-.528 3.084 2.769-1.456a.75.75 0 01.698 0l2.77 1.456-.53-3.084a.75.75 0 01.216-.664l2.24-2.183-3.096-.45a.75.75 0 01-.564-.41L8 2.694z'
+    };
+
+    // =========================================================================
+    // CUSTOM PRESET ITEM CREATION
+    // =========================================================================
+
     /**
      * Create a custom preset list item element using DOM methods.
+     * Refactored to use helper functions for better readability and maintainability.
      *
      * @param {Object} preset - The preset object
      * @param {number} index - The index in the sorted array
      * @returns {HTMLElement} The list item element
      */
     function createCustomPresetItem(preset, index) {
+        // Create container
         const item = document.createElement('div');
         item.className = 'custom-preset-item';
         item.dataset.id = preset.id;
         item.dataset.index = String(index);
         item.draggable = true;
         item.setAttribute('aria-posinset', String(index + 1));
-        item.setAttribute('aria-setsize', String(customPresets.length));
+        item.setAttribute('aria-setsize', String(state.customPresets.length));
 
-        // Drag handle
-        const dragHandle = document.createElement('button');
-        dragHandle.className = 'drag-handle';
-        dragHandle.type = 'button';
-        dragHandle.setAttribute('aria-label', `Reorder ${preset.name}, use Alt+Arrow keys`);
-        dragHandle.title = 'Drag to reorder';
+        // Create drag handle using helper
+        const dragHandle = createIconButton({
+            className: 'drag-handle',
+            ariaLabel: `Reorder ${preset.name}, use Alt+Arrow keys`,
+            title: 'Drag to reorder',
+            iconPath: SVG_PATHS.drag
+        });
         dragHandle.tabIndex = 0;
 
-        const dragSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-        dragSvg.setAttribute('viewBox', '0 0 16 16');
-        dragSvg.setAttribute('fill', 'currentColor');
-        dragSvg.setAttribute('aria-hidden', 'true');
-        const dragPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-        dragPath.setAttribute('d', 'M2 4h12v1H2V4zm0 3.5h12v1H2v-1zm0 3.5h12v1H2v-1z');
-        dragSvg.appendChild(dragPath);
-        dragHandle.appendChild(dragSvg);
-
-        // Apply button
+        // Create apply button with name and width
         const applyBtn = document.createElement('button');
         applyBtn.className = 'preset-apply-btn';
         applyBtn.type = 'button';
@@ -855,41 +892,23 @@
         applyBtn.appendChild(nameSpan);
         applyBtn.appendChild(widthSpan);
 
-        // Favorite button
-        const favBtn = document.createElement('button');
-        favBtn.className = 'favorite-btn' + (preset.favorite ? ' active' : '');
-        favBtn.type = 'button';
-        favBtn.setAttribute('aria-label', preset.favorite ? `Remove ${preset.name} from favorites` : `Add ${preset.name} to favorites`);
-        favBtn.setAttribute('aria-pressed', preset.favorite ? 'true' : 'false');
-        favBtn.title = preset.favorite ? 'Remove from favorites' : 'Add to favorites';
+        // Create favorite button using helper
+        const isFavorite = preset.favorite;
+        const favBtn = createIconButton({
+            className: 'favorite-btn' + (isFavorite ? ' active' : ''),
+            ariaLabel: isFavorite ? `Remove ${preset.name} from favorites` : `Add ${preset.name} to favorites`,
+            title: isFavorite ? 'Remove from favorites' : 'Add to favorites',
+            iconPath: isFavorite ? SVG_PATHS.starFilled : SVG_PATHS.starOutline
+        });
+        favBtn.setAttribute('aria-pressed', String(isFavorite));
 
-        const starSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-        starSvg.setAttribute('viewBox', '0 0 16 16');
-        starSvg.setAttribute('fill', 'currentColor');
-        starSvg.setAttribute('aria-hidden', 'true');
-        const starPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-        starPath.setAttribute('d', preset.favorite
-            ? 'M8 .25a.75.75 0 01.673.418l1.882 3.815 4.21.612a.75.75 0 01.416 1.279l-3.046 2.97.719 4.192a.75.75 0 01-1.088.791L8 12.347l-3.766 1.98a.75.75 0 01-1.088-.79l.72-4.194L.818 6.374a.75.75 0 01.416-1.28l4.21-.611L7.327.668A.75.75 0 018 .25z'
-            : 'M8 .25a.75.75 0 01.673.418l1.882 3.815 4.21.612a.75.75 0 01.416 1.279l-3.046 2.97.719 4.192a.75.75 0 01-1.088.791L8 12.347l-3.766 1.98a.75.75 0 01-1.088-.79l.72-4.194L.818 6.374a.75.75 0 01.416-1.28l4.21-.611L7.327.668A.75.75 0 018 .25zm0 2.445L6.615 5.5a.75.75 0 01-.564.41l-3.097.45 2.24 2.184a.75.75 0 01.216.664l-.528 3.084 2.769-1.456a.75.75 0 01.698 0l2.77 1.456-.53-3.084a.75.75 0 01.216-.664l2.24-2.183-3.096-.45a.75.75 0 01-.564-.41L8 2.694z'
-        );
-        starSvg.appendChild(starPath);
-        favBtn.appendChild(starSvg);
-
-        // Edit button
-        const editBtn = document.createElement('button');
-        editBtn.className = 'edit-btn';
-        editBtn.type = 'button';
-        editBtn.setAttribute('aria-label', `Edit ${preset.name}`);
-        editBtn.title = 'Edit preset';
-
-        const editSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-        editSvg.setAttribute('viewBox', '0 0 16 16');
-        editSvg.setAttribute('fill', 'currentColor');
-        editSvg.setAttribute('aria-hidden', 'true');
-        const editPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-        editPath.setAttribute('d', 'M11.013 1.427a1.75 1.75 0 012.474 0l1.086 1.086a1.75 1.75 0 010 2.474l-8.61 8.61c-.21.21-.47.364-.756.445l-3.251.93a.75.75 0 01-.927-.928l.929-3.25a1.75 1.75 0 01.445-.758l8.61-8.61zm1.414 1.06a.25.25 0 00-.354 0L10.811 3.75l1.439 1.44 1.263-1.263a.25.25 0 000-.354l-1.086-1.086zM11.189 6.25L9.75 4.81l-6.286 6.287a.25.25 0 00-.064.108l-.558 1.953 1.953-.558a.25.25 0 00.108-.064l6.286-6.286z');
-        editSvg.appendChild(editPath);
-        editBtn.appendChild(editSvg);
+        // Create edit button using helper
+        const editBtn = createIconButton({
+            className: 'edit-btn',
+            ariaLabel: `Edit ${preset.name}`,
+            title: 'Edit preset',
+            iconPath: SVG_PATHS.edit
+        });
 
         // Append all elements
         item.appendChild(dragHandle);
@@ -897,19 +916,34 @@
         item.appendChild(favBtn);
         item.appendChild(editBtn);
 
-        // Event listeners
+        // Attach event listeners
+        attachPresetItemListeners(item, applyBtn, favBtn, editBtn, preset);
+
+        return item;
+    }
+
+    /**
+     * Attach event listeners to a custom preset item.
+     * Extracted for testability and clarity.
+     *
+     * @param {HTMLElement} item - The preset item container
+     * @param {HTMLButtonElement} applyBtn - The apply button
+     * @param {HTMLButtonElement} favBtn - The favorite button
+     * @param {HTMLButtonElement} editBtn - The edit button
+     * @param {Object} preset - The preset data
+     */
+    function attachPresetItemListeners(item, applyBtn, favBtn, editBtn, preset) {
+        // Click handlers
         applyBtn.addEventListener('click', () => handleApplyCustomPreset(preset));
         favBtn.addEventListener('click', () => handleToggleFavorite(preset.id));
         editBtn.addEventListener('click', () => openEditModal(preset));
 
-        // Drag events
+        // Drag handlers
         item.addEventListener('dragstart', handleDragStart);
         item.addEventListener('dragend', handleDragEnd);
         item.addEventListener('dragover', handleDragOver);
         item.addEventListener('drop', handleDrop);
         item.addEventListener('dragleave', handleDragLeave);
-
-        return item;
     }
 
     /**
@@ -932,7 +966,7 @@
      * @param {string} presetId - The preset ID
      */
     function handleToggleFavorite(presetId) {
-        const preset = customPresets.find(p => p.id === presetId);
+        const preset = state.customPresets.find(p => p.id === presetId);
         if (preset) {
             preset.favorite = !preset.favorite;
             saveCustomPresets();
@@ -945,7 +979,7 @@
      * Handle save current width as preset button click.
      */
     function handleSaveCurrentClick() {
-        if (customPresets.length >= MAX_CUSTOM_PRESETS) {
+        if (state.customPresets.length >= MAX_CUSTOM_PRESETS) {
             announceChange('Maximum number of custom presets reached');
             return;
         }
@@ -976,12 +1010,12 @@
         const newPreset = {
             id: generateUUID(),
             name: name,
-            width: selectedWidth,
+            width: state.selectedWidth,
             favorite: false,
-            order: customPresets.length
+            order: state.customPresets.length
         };
 
-        customPresets.push(newPreset);
+        state.customPresets.push(newPreset);
         saveCustomPresets();
         renderCustomPresets();
 
@@ -990,7 +1024,7 @@
             newPresetForm.hidden = true;
         }
 
-        announceChange(`Custom preset "${name}" created at ${selectedWidth} percent`);
+        announceChange(`Custom preset "${name}" created at ${state.selectedWidth} percent`);
     }
 
     /**
@@ -1013,7 +1047,7 @@
     function openEditModal(preset) {
         if (!editModal) return;
 
-        editingPresetId = preset.id;
+        state.editingPresetId = preset.id;
         if (editPresetNameInput) {
             editPresetNameInput.value = preset.name;
         }
@@ -1029,9 +1063,9 @@
      * Handle saving edit changes.
      */
     function handleSaveEdit() {
-        if (!editingPresetId || !editPresetNameInput || !editPresetWidthInput) return;
+        if (!state.editingPresetId || !editPresetNameInput || !editPresetWidthInput) return;
 
-        const preset = customPresets.find(p => p.id === editingPresetId);
+        const preset = state.customPresets.find(p => p.id === state.editingPresetId);
         if (!preset) return;
 
         const newName = editPresetNameInput.value.trim();
@@ -1065,22 +1099,22 @@
         if (editModal) {
             editModal.hidden = true;
         }
-        editingPresetId = null;
+        state.editingPresetId = null;
     }
 
     /**
      * Handle deleting a preset.
      */
     function handleDeletePreset() {
-        if (!editingPresetId) return;
+        if (!state.editingPresetId) return;
 
-        const preset = customPresets.find(p => p.id === editingPresetId);
+        const preset = state.customPresets.find(p => p.id === state.editingPresetId);
         const presetName = preset ? preset.name : 'Preset';
 
-        customPresets = customPresets.filter(p => p.id !== editingPresetId);
+        state.customPresets = state.customPresets.filter(p => p.id !== state.editingPresetId);
 
         // Re-order remaining presets
-        customPresets.forEach((p, i) => {
+        state.customPresets.forEach((p, i) => {
             p.order = i;
         });
 
@@ -1098,7 +1132,7 @@
      * @param {number} direction - -1 for up, 1 for down
      */
     function reorderPreset(presetId, direction) {
-        const sorted = [...customPresets].sort((a, b) => (a.order || 0) - (b.order || 0));
+        const sorted = [...state.customPresets].sort((a, b) => (a.order || 0) - (b.order || 0));
         const index = sorted.findIndex(p => p.id === presetId);
 
         if (index === -1) return;
@@ -1141,7 +1175,7 @@
         const item = event.target.closest('.custom-preset-item');
         if (!item) return;
 
-        dragTarget = item;
+        state.dragTarget = item;
         item.classList.add('dragging');
         event.dataTransfer.effectAllowed = 'move';
         event.dataTransfer.setData('text/plain', item.dataset.id);
@@ -1157,7 +1191,7 @@
         if (item) {
             item.classList.remove('dragging');
         }
-        dragTarget = null;
+        state.dragTarget = null;
 
         // Remove all drag-over states
         document.querySelectorAll('.custom-preset-item.drag-over').forEach(el => {
@@ -1175,7 +1209,7 @@
         event.dataTransfer.dropEffect = 'move';
 
         const item = event.target.closest('.custom-preset-item');
-        if (item && item !== dragTarget) {
+        if (item && item !== state.dragTarget) {
             // Remove drag-over from all items
             document.querySelectorAll('.custom-preset-item.drag-over').forEach(el => {
                 el.classList.remove('drag-over');
@@ -1205,13 +1239,13 @@
         event.preventDefault();
 
         const dropTarget = event.target.closest('.custom-preset-item');
-        if (!dropTarget || !dragTarget || dropTarget === dragTarget) return;
+        if (!dropTarget || !state.dragTarget || dropTarget === state.dragTarget) return;
 
-        const dragId = dragTarget.dataset.id;
+        const dragId = state.dragTarget.dataset.id;
         const dropId = dropTarget.dataset.id;
 
-        const dragPreset = customPresets.find(p => p.id === dragId);
-        const dropPreset = customPresets.find(p => p.id === dropId);
+        const dragPreset = state.customPresets.find(p => p.id === dragId);
+        const dropPreset = state.customPresets.find(p => p.id === dropId);
 
         if (dragPreset && dropPreset) {
             // Swap orders
@@ -1237,11 +1271,11 @@
     async function loadRecentWidths() {
         try {
             const result = await browser.storage.local.get('recentWidths');
-            recentWidths = result.recentWidths || [];
+            state.recentWidths = result.recentWidths || [];
             renderRecentWidths();
         } catch (error) {
             console.error('[Claude Width Popup] Error loading recent widths:', error);
-            recentWidths = [];
+            state.recentWidths = [];
         }
     }
 
@@ -1252,8 +1286,8 @@
         if (!recentlyUsedList || !recentlyUsedContainer) return;
 
         // Filter out widths that match built-in or custom presets
-        const presetWidths = [...BUILT_IN_PRESETS.map(p => p.width), ...customPresets.map(p => p.width)];
-        const uniqueRecent = recentWidths.filter(w => !presetWidths.includes(w));
+        const presetWidths = [...BUILT_IN_PRESETS.map(p => p.width), ...state.customPresets.map(p => p.width)];
+        const uniqueRecent = state.recentWidths.filter(w => !presetWidths.includes(w));
 
         if (uniqueRecent.length === 0) {
             recentlyUsedContainer.hidden = true;
@@ -1270,7 +1304,7 @@
             btn.setAttribute('aria-label', `Apply ${width}% width`);
             btn.textContent = `${width}%`;
             btn.addEventListener('click', () => {
-                selectedWidth = width;
+                state.selectedWidth = width;
                 sliderElement.value = width;
                 updateDisplay(width);
                 updatePresetHighlight(width);
@@ -1356,13 +1390,13 @@
      * Shows visual feedback when slider value differs from saved value.
      */
     function updateUnsavedIndicator() {
-        const hasUnsavedChanges = selectedWidth !== savedWidth;
+        const hasUnsavedChanges = state.selectedWidth !== state.savedWidth;
 
         // Update Apply button to indicate pending changes
         if (applyButton) {
             if (hasUnsavedChanges) {
                 applyButton.classList.add('has-changes');
-                applyButton.setAttribute('aria-label', `Apply pending change to ${selectedWidth} percent`);
+                applyButton.setAttribute('aria-label', `Apply pending change to ${state.selectedWidth} percent`);
             } else {
                 applyButton.classList.remove('has-changes');
                 applyButton.setAttribute('aria-label', 'Apply current width setting');
@@ -1480,13 +1514,13 @@
             const stored = result[THEME_STORAGE_KEY];
 
             if (stored && VALID_THEMES.includes(stored)) {
-                currentTheme = stored;
+                state.currentTheme = stored;
             } else {
-                currentTheme = DEFAULT_THEME;
+                state.currentTheme = DEFAULT_THEME;
             }
 
-            applyTheme(currentTheme);
-            updateThemeButtons(currentTheme);
+            applyTheme(state.currentTheme);
+            updateThemeButtons(state.currentTheme);
 
         } catch (error) {
             console.error('[Claude Width Popup] Error loading theme:', error);
@@ -1519,17 +1553,17 @@
             const stored = result[STORAGE_KEY];
 
             if (typeof stored === 'number' && stored >= MIN_WIDTH && stored <= MAX_WIDTH) {
-                selectedWidth = stored;
-                savedWidth = stored;
+                state.selectedWidth = stored;
+                state.savedWidth = stored;
             } else {
-                selectedWidth = DEFAULT_WIDTH;
-                savedWidth = DEFAULT_WIDTH;
+                state.selectedWidth = DEFAULT_WIDTH;
+                state.savedWidth = DEFAULT_WIDTH;
             }
 
             // Update UI with loaded value
-            sliderElement.value = selectedWidth;
-            updateDisplay(selectedWidth);
-            updatePresetHighlight(selectedWidth);
+            sliderElement.value = state.selectedWidth;
+            updateDisplay(state.selectedWidth);
+            updatePresetHighlight(state.selectedWidth);
             updateUnsavedIndicator();
 
         } catch (error) {
@@ -1549,7 +1583,7 @@
         try {
             // Save to storage
             await browser.storage.local.set({ [STORAGE_KEY]: width });
-            savedWidth = width;
+            state.savedWidth = width;
             updateUnsavedIndicator();
 
             console.log(`[Claude Width Popup] Saved width: ${width}%`);
@@ -1588,9 +1622,9 @@
 
             if (tabs.length > 0) {
                 const currentTab = tabs[0];
-                isOnClaudeTab = currentTab.url && currentTab.url.includes('claude.ai');
+                state.isOnClaudeTab = currentTab.url && currentTab.url.includes('claude.ai');
 
-                if (isOnClaudeTab) {
+                if (state.isOnClaudeTab) {
                     // Try to get status from content script
                     try {
                         const response = await browser.tabs.sendMessage(currentTab.id, { action: 'getStatus' });
@@ -1656,10 +1690,10 @@
 
         if (advancedToggle && advancedContent) {
             advancedToggle.addEventListener('click', () => {
-                advancedExpanded = !advancedExpanded;
-                advancedContent.hidden = !advancedExpanded;
-                advancedToggle.setAttribute('aria-expanded', String(advancedExpanded));
-                advancedToggle.classList.toggle('expanded', advancedExpanded);
+                state.advancedExpanded = !state.advancedExpanded;
+                advancedContent.hidden = !state.advancedExpanded;
+                advancedToggle.setAttribute('aria-expanded', String(state.advancedExpanded));
+                advancedToggle.classList.toggle('expanded', state.advancedExpanded);
 
                 // Update focusable elements
                 cacheFocusableElements();
@@ -1778,7 +1812,7 @@
         const toggleCodeBlocksBtn = document.getElementById('toggleCodeBlocksBtn');
         if (toggleCodeBlocksBtn) {
             toggleCodeBlocksBtn.addEventListener('click', async () => {
-                const currentState = enhancedSettings[ENHANCED_KEYS.CODE_BLOCKS_COLLAPSED];
+                const currentState = state.enhancedSettings[ENHANCED_KEYS.CODE_BLOCKS_COLLAPSED];
                 const newState = !currentState;
                 saveEnhancedSetting(ENHANCED_KEYS.CODE_BLOCKS_COLLAPSED, newState);
                 updateCodeBlocksButtonText(newState);
@@ -1824,13 +1858,13 @@
             // Merge with defaults
             for (const key of keys) {
                 if (result[key] !== undefined) {
-                    enhancedSettings[key] = result[key];
+                    state.enhancedSettings[key] = result[key];
                 }
             }
 
             // Update UI to reflect loaded settings
             updateEnhancedStyleUI();
-            console.log('[Claude Width Popup] Enhanced settings loaded:', enhancedSettings);
+            console.log('[Claude Width Popup] Enhanced settings loaded:', state.enhancedSettings);
         } catch (error) {
             console.error('[Claude Width Popup] Error loading enhanced settings:', error);
         }
@@ -1844,7 +1878,7 @@
      */
     async function saveEnhancedSetting(key, value) {
         try {
-            enhancedSettings[key] = value;
+            state.enhancedSettings[key] = value;
             await browser.storage.local.set({ [key]: value });
             console.log(`[Claude Width Popup] Saved ${key}: ${value}`);
         } catch (error) {
@@ -1860,47 +1894,47 @@
         const fontSizeSlider = document.getElementById('fontSizeSlider');
         const fontSizeValue = document.getElementById('fontSizeValue');
         if (fontSizeSlider) {
-            fontSizeSlider.value = enhancedSettings[ENHANCED_KEYS.FONT_SIZE];
+            fontSizeSlider.value = state.enhancedSettings[ENHANCED_KEYS.FONT_SIZE];
         }
         if (fontSizeValue) {
-            fontSizeValue.textContent = `${enhancedSettings[ENHANCED_KEYS.FONT_SIZE]}%`;
+            fontSizeValue.textContent = `${state.enhancedSettings[ENHANCED_KEYS.FONT_SIZE]}%`;
         }
 
         // Line height buttons
-        updateOptionButtons('lineHeight', enhancedSettings[ENHANCED_KEYS.LINE_HEIGHT]);
+        updateOptionButtons('lineHeight', state.enhancedSettings[ENHANCED_KEYS.LINE_HEIGHT]);
 
         // Message padding buttons
-        updateOptionButtons('messagePadding', enhancedSettings[ENHANCED_KEYS.MESSAGE_PADDING]);
+        updateOptionButtons('messagePadding', state.enhancedSettings[ENHANCED_KEYS.MESSAGE_PADDING]);
 
         // Display mode buttons
-        updateDisplayModeButtons(enhancedSettings[ENHANCED_KEYS.DISPLAY_MODE]);
+        updateDisplayModeButtons(state.enhancedSettings[ENHANCED_KEYS.DISPLAY_MODE]);
 
         // Code block height buttons
-        updateOptionButtons('codeBlockMaxHeight', String(enhancedSettings[ENHANCED_KEYS.CODE_BLOCK_HEIGHT]));
+        updateOptionButtons('codeBlockMaxHeight', String(state.enhancedSettings[ENHANCED_KEYS.CODE_BLOCK_HEIGHT]));
 
         // Code wrap toggle
         const codeWrapToggle = document.getElementById('codeWrapToggle');
         if (codeWrapToggle) {
-            codeWrapToggle.checked = enhancedSettings[ENHANCED_KEYS.CODE_BLOCK_WRAP];
+            codeWrapToggle.checked = state.enhancedSettings[ENHANCED_KEYS.CODE_BLOCK_WRAP];
         }
 
         // Show timestamps toggle
         const showTimestampsToggle = document.getElementById('showTimestampsToggle');
         if (showTimestampsToggle) {
-            showTimestampsToggle.checked = enhancedSettings[ENHANCED_KEYS.SHOW_TIMESTAMPS];
+            showTimestampsToggle.checked = state.enhancedSettings[ENHANCED_KEYS.SHOW_TIMESTAMPS];
         }
 
         // Show avatars toggle
         const showAvatarsToggle = document.getElementById('showAvatarsToggle');
         if (showAvatarsToggle) {
-            showAvatarsToggle.checked = enhancedSettings[ENHANCED_KEYS.SHOW_AVATARS];
+            showAvatarsToggle.checked = state.enhancedSettings[ENHANCED_KEYS.SHOW_AVATARS];
         }
 
         // Bubble style buttons
-        updateOptionButtons('messageBubbleStyle', enhancedSettings[ENHANCED_KEYS.BUBBLE_STYLE]);
+        updateOptionButtons('messageBubbleStyle', state.enhancedSettings[ENHANCED_KEYS.BUBBLE_STYLE]);
 
         // Code blocks collapsed button text
-        updateCodeBlocksButtonText(enhancedSettings[ENHANCED_KEYS.CODE_BLOCKS_COLLAPSED]);
+        updateCodeBlocksButtonText(state.enhancedSettings[ENHANCED_KEYS.CODE_BLOCKS_COLLAPSED]);
     }
 
     /**
@@ -1988,7 +2022,7 @@
         try {
             // Save all defaults to storage
             await browser.storage.local.set(ENHANCED_DEFAULTS);
-            enhancedSettings = { ...ENHANCED_DEFAULTS };
+            state.enhancedSettings = { ...ENHANCED_DEFAULTS };
 
             // Update UI
             updateEnhancedStyleUI();

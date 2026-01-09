@@ -28,6 +28,9 @@ Thumbs.db
 # Node modules (if using web-ext or other tools)
 node_modules/
 
+# Test coverage reports
+coverage/
+
 # Temporary files
 *.tmp
 *.temp
