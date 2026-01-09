@@ -1,14 +1,14 @@
 # Claude Chat Width Customizer - Development Roadmap
 
-**Version Range:** v1.6.0 - v2.0.0
+**Version Range:** v1.6.0 - v2.0.0+
 **Last Updated:** 2026-01-08
-**Status:** v1.9.0 Complete
+**Status:** v1.9.1 Complete
 
 ---
 
 ## Overview
 
-This document outlines the planned features and improvements for each minor release leading up to v2.0.0. Each version focuses on a specific theme to ensure incremental, well-tested improvements.
+This document outlines the planned features and improvements for the Claude Chat Width Customizer Firefox extension. Each version focuses on a specific theme to ensure incremental, well-tested improvements.
 
 ---
 
@@ -19,8 +19,34 @@ This document outlines the planned features and improvements for each minor rele
 | v1.6.0 | Keyboard & Accessibility | Keyboard shortcuts, ARIA improvements | **COMPLETE** |
 | v1.7.0 | Custom Presets | User-defined presets, preset management | **COMPLETE** |
 | v1.8.0 | Enhanced Styling | Font size, line spacing, compact mode | **COMPLETE** |
+| v1.8.1 - v1.8.4 | Bugfixes | Real-time updates, toggle fixes, DOM selectors | **COMPLETE** |
 | v1.9.0 | Sync & Profiles | Cross-device sync, multiple profiles | **COMPLETE** |
-| v2.0.0 | Multi-Browser & Polish | Chrome/Edge support, UI overhaul | Planned |
+| v1.9.1 | Technical Debt | ESLint, pre-commit hooks, JSDoc types | **COMPLETE** |
+| v1.10.x | Selector Resilience | Claude UI change detection, auto-recovery | Planned |
+| v1.11.x | Per-Site Profiles | Auto-apply profiles based on URL patterns | Planned |
+| v2.0.0 | Multi-Browser & Polish | Chrome/Edge support, Manifest V3 | Planned |
+
+---
+
+## Recently Completed
+
+### v1.9.1 - Technical Debt Remediation (2026-01-08)
+
+**Theme:** Code quality infrastructure and developer experience improvements.
+
+- [x] **ESLint v9.x Flat Config** - Modern `eslint.config.js` with proper globals
+- [x] **Pre-commit Hooks** - Husky + lint-staged for automated linting
+- [x] **JSDoc Type Definitions** - Full type documentation for all data structures
+- [x] **Enhanced Logger** - Configurable log levels in `ClaudeWidthLogger`
+- [x] **Bug Fixes** - 5 ESLint errors fixed across codebase
+- [x] **Test Suite** - 281 tests passing with Vitest + jsdom
+
+### v1.8.1 - v1.8.4 - Enhanced Styling Bugfixes (2026-01-08)
+
+- [x] v1.8.4: Fixed toggle switch clickability issues
+- [x] v1.8.3: Fixed word wrap, collapse, timestamps, avatars, bubble styles
+- [x] v1.8.2: CSS custom properties, state consolidation, 206 tests
+- [x] v1.8.1: Real-time enhanced styling updates, 60+ DOM selectors
 
 ---
 
@@ -360,9 +386,120 @@ This document outlines the planned features and improvements for each minor rele
 
 ---
 
-## v2.0.0 - Multi-Browser & Polish
+## v1.10.x - Selector Resilience (Planned)
+
+**Theme:** Improve robustness against Claude UI changes.
+
+**Target:** Q1 2026
+
+### Features
+
+- [ ] **Selector Fallback System**
+  - Multiple selector strategies per element type
+  - Graceful degradation when selectors fail
+  - Automatic retry with alternative selectors
+
+- [ ] **UI Change Detection**
+  - Detect when Claude updates their DOM structure
+  - Log selector failures for debugging
+  - User notification when extension may need updating
+
+- [ ] **Selector Registry**
+  - Centralized selector management in dedicated module
+  - Version-tagged selector sets
+  - Easy maintenance when Claude UI changes
+
+- [ ] **Health Check**
+  - Popup indicator for extension health status
+  - Console warnings for selector mismatches
+  - Debug mode for troubleshooting
+
+### Technical Tasks
+
+- [ ] Create `lib/selectors.js` module with selector registry
+- [ ] Implement fallback chain for each target element
+- [ ] Add selector validation on page load
+- [ ] Create health status API for popup
+- [ ] Document selector update process
+
+### Testing Checklist
+
+- [ ] Extension gracefully handles missing elements
+- [ ] Fallback selectors work correctly
+- [ ] Health check accurately reports status
+- [ ] No console errors during normal operation
+
+---
+
+## v1.11.x - Per-Site Profiles (Planned)
+
+**Theme:** Context-aware profile switching based on URL patterns.
+
+**Target:** Q1-Q2 2026
+
+### Features
+
+- [ ] **URL-Based Profile Switching**
+  - Auto-apply profiles based on URL patterns
+  - Support for wildcards (e.g., `*://claude.ai/chat/*`)
+  - Manual override option
+
+- [ ] **Conversation Type Detection**
+  - Different widths for chat vs project vs artifact views
+  - Heuristic-based content type detection
+  - User-configurable rules
+
+- [ ] **Profile Rules Manager**
+  - Options page UI for managing auto-profile rules
+  - Rule priority ordering
+  - Enable/disable individual rules
+
+- [ ] **Session Memory**
+  - Remember manual profile changes per-tab
+  - Option to persist or reset on navigation
+
+### Technical Tasks
+
+- [ ] Extend `autoProfileRules` storage schema
+- [ ] Implement URL pattern matching engine
+- [ ] Add content script URL change detection
+- [ ] Build rules manager UI in Options page
+- [ ] Add per-tab session storage
+
+### Storage Schema Addition
+
+```javascript
+{
+  autoProfileRules: [
+    {
+      id: 'uuid',
+      pattern: '*://claude.ai/chat/*',
+      profileId: 'work',
+      enabled: true,
+      priority: 1
+    }
+  ],
+  sessionMemory: {
+    enabled: true,
+    persistOnNavigation: false
+  }
+}
+```
+
+### Testing Checklist
+
+- [ ] URL patterns match correctly
+- [ ] Profile switches on navigation
+- [ ] Manual overrides work
+- [ ] Rules UI is accessible
+
+---
+
+## v2.0.0 - Multi-Browser & Polish (Planned)
 
 **Theme:** Major release with Chrome/Edge support and comprehensive UI/UX overhaul.
+
+**Target:** Q2-Q3 2026
 
 ### Features
 
@@ -374,7 +511,7 @@ This document outlines the planned features and improvements for each minor rele
 
 - [ ] **UI Overhaul**
   - Redesigned popup with modern aesthetics
-  - Options page for advanced settings
+  - Streamlined Options page
   - Onboarding flow for new users
   - Visual changelog/what's new on update
 
@@ -384,29 +521,22 @@ This document outlines the planned features and improvements for each minor rele
   - Faster style injection
   - Optimized MutationObserver usage
 
-- [ ] **Developer Experience**
+- [ ] **Build System**
   - Automated build pipeline (webpack/rollup)
-  - Cross-browser testing setup
-  - TypeScript migration (optional)
-  - Comprehensive JSDoc documentation
-
-- [ ] **Quality Assurance**
-  - Unit tests for core logic
-  - E2E tests with Playwright/Puppeteer
-  - Automated accessibility testing
-  - Performance benchmarks
+  - Source maps for debugging
+  - Minification for production builds
+  - Multi-browser output targets
 
 ### Technical Tasks
 
-- Create browser abstraction layer (`browser` vs `chrome` APIs)
-- Convert Manifest V2 to V3 for Chrome
+- [ ] Create browser abstraction layer (`browser` vs `chrome` APIs)
+- [ ] Convert Manifest V2 to V3 for Chrome
   - Replace background scripts with service workers
   - Update CSP for Manifest V3 requirements
   - Handle `scripting` API changes
-- Set up build tooling for multi-browser output
-- Redesign popup UI components
-- Write comprehensive test suite
-- Create CI/CD pipeline for releases
+- [ ] Set up build tooling for multi-browser output
+- [ ] Redesign popup UI components
+- [ ] Create CI/CD pipeline for releases
 
 ### Manifest V3 Considerations
 
@@ -447,21 +577,83 @@ export const tabs = {
 - [ ] Edge (Manifest V3) full functionality
 - [ ] All existing features work on all browsers
 - [ ] Performance is equal or better than v1.x
-- [ ] No regressions from v1.9.0
+- [ ] No regressions from v1.9.x
+
+---
+
+## Technical Debt & Maintenance
+
+### Current Technical Debt
+
+| Item | Priority | Effort | Notes |
+|------|----------|--------|-------|
+| ESLint warnings (22 remaining) | Medium | Low | Non-blocking, mostly stylistic |
+| TypeScript migration consideration | Low | High | Would improve type safety |
+| E2E testing setup | High | Medium | Playwright/Puppeteer for browser testing |
+| CI/CD pipeline | High | Medium | GitHub Actions for automated testing |
+| Automated release workflow | Medium | Low | Tag-based releases |
+| IIFE pattern refactor | Low | High | Current pattern limits V8 coverage |
+
+### Planned Infrastructure Improvements
+
+- [ ] **CI/CD Pipeline (GitHub Actions)**
+  - Lint on PR
+  - Run test suite on PR
+  - Build XPI artifact
+  - Automated release on tag
+
+- [ ] **E2E Testing**
+  - Playwright setup for Firefox extension testing
+  - Test popup interactions
+  - Test content script injection
+  - Test storage persistence
+
+- [ ] **Code Quality Gates**
+  - Require passing tests for merge
+  - Require lint-clean for merge
+  - Coverage reporting (acknowledging IIFE limitations)
+
+- [ ] **Documentation**
+  - API documentation from JSDoc
+  - Architecture diagrams
+  - Troubleshooting guide
+
+### Maintenance Schedule
+
+| Task | Frequency | Description |
+|------|-----------|-------------|
+| Dependency updates | Monthly | Check for security updates |
+| Selector validation | Weekly | Test against live claude.ai |
+| Test suite review | Per release | Ensure coverage of new features |
+| Documentation sync | Per release | Keep docs current |
 
 ---
 
 ## Future Considerations (Post v2.0.0)
 
-Ideas for v2.x and beyond:
+### v2.x Planned
 
-- **Safari Support** - WebExtensions API for Safari
-- **Mobile Firefox** - Android Firefox support
-- **Claude API Integration** - If Claude offers extension APIs
-- **Theme Marketplace** - Share custom themes with other users
-- **AI-Powered Suggestions** - Recommend optimal width based on content type
-- **Multi-Site Support** - Extend to other AI chat interfaces (ChatGPT, etc.)
-- **Internationalization** - Multi-language support for popup UI
+| Feature | Description | Complexity |
+|---------|-------------|------------|
+| Firefox Manifest V3 | Migrate Firefox to MV3 when stable | Medium |
+| Cross-browser sync | Sync beyond Firefox (Chrome sync, etc.) | High |
+| Cloud backup | Optional cloud backup service | High |
+| Custom CSS injection | Advanced users can inject custom styles | Medium |
+| Theme customization | Beyond Light/Dark/System | Medium |
+
+### Long-term Wishlist
+
+| Feature | Description | Feasibility |
+|---------|-------------|-------------|
+| Safari Support | WebExtensions API for Safari | Medium |
+| Mobile Firefox | Android Firefox support | Medium |
+| Claude API Integration | If Claude offers extension APIs | Unknown |
+| Theme Marketplace | Share custom themes with other users | High effort |
+| AI-Powered Suggestions | Recommend optimal width based on content | Experimental |
+| Multi-Site Support | ChatGPT, Gemini, etc. | High effort |
+| Internationalization | Multi-language UI | Medium |
+| Community preset sharing | Import/export presets from community | Medium |
+| Automated UI change detection | Auto-update selectors | Experimental |
 
 ---
 
@@ -496,12 +688,43 @@ For each version:
 
 ## Questions & Decisions Needed
 
+### Resolved
+
 - [x] **v1.7.0**: Maximum number of custom presets? **Answer: 4 custom + 4 built-in = 8 total**
 - [x] **v1.8.0**: Should typography controls affect input area too? **Answer: No, only message content**
 - [x] **v1.9.0**: Should sync be opt-in or opt-out by default? **Answer: Opt-in (syncEnabled: false by default)**
-- [ ] **v2.0.0**: TypeScript migration - worth the effort?
-- [ ] **v2.0.0**: Separate repos for Firefox/Chrome or monorepo?
+- [x] **v1.9.0**: Maximum number of profiles? **Answer: 8 named profiles**
+- [x] **v1.9.1**: ESLint configuration approach? **Answer: v9.x flat config (eslint.config.js)**
+
+### Open Questions
+
+- [ ] **v1.10.x**: How to notify users of selector failures without being intrusive?
+- [ ] **v1.11.x**: Should auto-profile rules be per-profile or global?
+- [ ] **v2.0.0**: TypeScript migration - worth the effort given current JSDoc coverage?
+- [ ] **v2.0.0**: Separate repos for Firefox/Chrome or monorepo with build targets?
+- [ ] **v2.0.0**: Which build tool - webpack, rollup, or esbuild?
+- [ ] **v2.x**: Should we support syncing profiles across different browsers?
+
+---
+
+## Changelog Summary
+
+| Version | Date | Highlights |
+|---------|------|------------|
+| v1.9.1 | 2026-01-08 | ESLint v9.x, pre-commit hooks, JSDoc types, 281 tests |
+| v1.9.0 | 2026-01-08 | Profiles (8 max), browser sync, import/export, factory reset |
+| v1.8.4 | 2026-01-08 | Toggle switch clickability fix |
+| v1.8.3 | 2026-01-08 | Word wrap, collapse, timestamps, avatars, bubble fixes |
+| v1.8.2 | 2026-01-08 | CSS custom properties, state consolidation, 206 tests |
+| v1.8.1 | 2026-01-08 | Real-time enhanced styling, 60+ DOM selectors |
+| v1.8.0 | 2026-01-08 | Typography, display modes, code blocks, visual tweaks |
+| v1.7.0 | 2026-01-08 | Custom presets, context menu, recent widths, default 70% |
+| v1.6.0 | 2026-01-07 | Keyboard shortcuts, accessibility, badge, options page |
+| v1.5.1 | 2026-01-06 | Mozilla Add-ons data_collection_permissions |
+| v1.5.0 | 2026-01-06 | Light/Dark/System themes, CSP compliance |
 
 ---
 
 *This roadmap is subject to change based on user feedback, Claude.ai UI changes, and browser API updates.*
+
+*Last updated: 2026-01-08 | Current version: v1.9.1*

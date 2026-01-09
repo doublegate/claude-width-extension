@@ -1,8 +1,10 @@
 # Claude Chat Width Customizer
 
-A Firefox extension that allows you to customize the width of the text input/output boxes in the main chat window on [claude.ai](https://claude.ai).
+**Version 1.9.1** | Firefox Extension (Manifest V2)
 
-![Extension Preview](icons/icon-96.png)
+A Firefox extension that allows you to customize the width of the chat interface on [claude.ai](https://claude.ai). Features configuration profiles, Firefox Sync integration, enhanced styling options, and comprehensive accessibility support.
+
+![Claude Chat Width Customizer Banner](images/CCWC-Banner_Logo.jpg)
 
 ## Features
 
@@ -25,6 +27,9 @@ A Firefox extension that allows you to customize the width of the text input/out
 - **SPA Compatible**: Works seamlessly with Claude's single-page application navigation
 - **Security Hardened**: Content Security Policy (CSP) enforced, no unsafe DOM operations
 - **Mozilla Add-ons Compliant**: Includes required `data_collection_permissions` declaration
+- **Developer Tooling** (v1.9.1): ESLint v9.x, Vitest test suite (281 tests), pre-commit hooks with Husky
+
+![Extension Preview](icons/icon-96.png)
 
 ## Installation
 
@@ -50,7 +55,11 @@ A Firefox extension that allows you to customize the width of the text input/out
 cd claude-width-extension
 
 # Create the XPI file (ZIP with .xpi extension)
-zip -r build/claude-width-customizer-v1.9.0.xpi . -x "*.git*" -x "build/*" -x "*.DS_Store" -x "CLAUDE.md" -x ".claude/*" -x "docs/*" -x "images/*" -x "tests/*" -x "node_modules/*" -x "coverage/*" -x "*.config.js"
+zip -r build/claude-width-customizer-v1.9.1.xpi . \
+  -x "*.git*" -x "build/*" -x "*.DS_Store" -x "CLAUDE.md" \
+  -x ".claude/*" -x "docs/*" -x "images/*" -x "tests/*" \
+  -x "node_modules/*" -x "coverage/*" -x "*.config.js" \
+  -x ".husky/*" -x "package*.json"
 ```
 
 ## Usage
@@ -119,14 +128,89 @@ Right-click anywhere on claude.ai pages to access the **Claude Width** context m
 
 Note: Global shortcuts can be customized via `about:addons` > gear icon > "Manage Extension Shortcuts"
 
+### Configuration Profiles
+
+Create profiles to save different configurations for different use cases:
+
+1. Click the profile dropdown in the popup header
+2. Select **"New Profile..."** to create a profile
+3. Name your profile (e.g., "Work", "Reading", "Code Review")
+4. Each profile stores all settings: width, theme, custom presets, and styling options
+
+**Profile Management:**
+- **Switch Profiles**: Use the dropdown in the popup header
+- **Edit/Delete**: Go to Options page (gear icon) > Profiles section
+- **Duplicate**: Create a copy of an existing profile as a starting point
+- **Sync**: Enable Firefox Sync to share profiles across browsers
+
+### Import/Export Settings
+
+Backup your settings or transfer them to another browser:
+
+1. Open the Options page (gear icon in popup)
+2. Scroll to **Data Management** section
+3. **Export**: Click "Export Settings" to download a JSON file
+4. **Import**: Click "Import Settings" and select a previously exported file
+5. **Reset**: Use "Reset to Factory Defaults" to start fresh
+
+## Development
+
+### Prerequisites
+
+- Node.js 20.19.0 or later
+- npm (comes with Node.js)
+- Firefox browser for testing
+
+### Setup
+
+```bash
+# Clone the repository
+git clone https://github.com/doublegate/claude-width-extension.git
+cd claude-width-extension
+
+# Install development dependencies
+npm install
+```
+
+### Available Scripts
+
+| Command | Description |
+|---------|-------------|
+| `npm test` | Run all 281 tests with Vitest |
+| `npm run test:watch` | Run tests in watch mode during development |
+| `npm run test:coverage` | Generate code coverage report |
+| `npm run test:ui` | Open Vitest UI for interactive testing |
+| `npm run lint` | Check code for ESLint issues |
+| `npm run lint:fix` | Automatically fix ESLint issues |
+| `npm run check` | Syntax check all JavaScript files |
+
+### Pre-commit Hooks
+
+The project uses Husky and lint-staged to automatically run ESLint on staged JavaScript files before each commit. This ensures code quality standards are maintained.
+
+### Testing in Firefox
+
+1. Open Firefox and navigate to `about:debugging`
+2. Click **"This Firefox"**
+3. Click **"Load Temporary Add-on..."**
+4. Select `manifest.json` from the project root
+5. Make changes and click "Reload" to test updates
+
 ## File Structure
 
 ```
 claude-width-extension/
-├── manifest.json           # Extension manifest (Manifest V2)
-├── README.md               # This file
+├── manifest.json           # Extension manifest (Manifest V2, v1.9.1)
+├── README.md               # This documentation
+├── CONTRIBUTING.md         # Contribution guidelines
+├── LICENSE                 # MIT license
+├── package.json            # Node.js project config (dev dependencies)
+├── package-lock.json       # Dependency lock file
+├── eslint.config.js        # ESLint v9.x flat configuration
+├── vitest.config.js        # Vitest test framework configuration
+├── .husky/                 # Git hooks for pre-commit linting
 ├── icons/
-│   ├── icon.svg            # Source icon
+│   ├── icon.svg            # Source vector icon
 │   ├── icon-48.png         # Toolbar icon (48px)
 │   ├── icon-96.png         # High-DPI toolbar icon (96px)
 │   └── icon-256.png        # Mozilla Add-ons listing icon (256px)
@@ -134,29 +218,48 @@ claude-width-extension/
 │   ├── constants.js        # Shared constants (loaded first by all scripts)
 │   └── profiles.js         # Profile management utilities (v1.9.0)
 ├── background/
-│   └── background.js       # Background script for keyboard commands
+│   └── background.js       # Background script for keyboard commands, badge, context menu
 ├── content/
 │   ├── content.js          # Content script injected into claude.ai
 │   └── content.css         # Base styles and transitions
 ├── options/
-│   ├── options.html        # Options/settings page
+│   ├── options.html        # Options/settings page (profiles, sync, import/export)
 │   ├── options.css         # Options page styling
 │   └── options.js          # Options page logic
 ├── popup/
 │   ├── popup.html          # Popup interface HTML
-│   ├── popup.css           # Popup styling
-│   └── popup.js            # Popup interaction logic
-└── docs/
-    └── ROADMAP.md          # Development roadmap
+│   ├── popup.css           # Popup styling (themes, drag-drop, modal)
+│   └── popup.js            # Popup interaction logic (presets CRUD, drag-drop)
+├── tests/
+│   ├── setup.js            # Test environment setup
+│   ├── mocks/
+│   │   └── browser.js      # Mock browser APIs for testing
+│   ├── constants.test.js   # Tests for lib/constants.js
+│   ├── profiles.test.js    # Tests for lib/profiles.js (75 tests)
+│   ├── popup.test.js       # Tests for popup functionality
+│   ├── content.test.js     # Tests for content script
+│   ├── background.test.js  # Tests for background script
+│   └── integration.test.js # Cross-module integration tests
+├── docs/
+│   ├── ROADMAP.md              # Development roadmap
+│   └── MANIFEST-V3-MIGRATION.md # Future migration guide
+└── build/
+    └── *.xpi               # Built packages (gitignored)
 ```
+
+## Architecture Overview
+
+![Extension Architecture Blueprint](images/CCWC-Infographic_Blueprint.jpg)
 
 ## Technical Details
 
 ### Permissions
 
-- `storage`: Persists user width and theme preferences
+- `storage`: Persists user preferences (local and sync storage for Firefox Sync)
 - `activeTab`: Detects when user is on claude.ai
 - `tabs`: Required for updating badge when switching tabs
+- `contextMenus`: Provides right-click menu access to presets
+- `downloads`: Enables settings export to JSON file
 
 ### How It Works
 
@@ -170,9 +273,9 @@ claude-width-extension/
 
 ### Browser Compatibility
 
-- **Firefox**: 109.0+ (tested)
-- **Firefox ESR**: Should work with recent ESR versions
-- **Chrome/Edge**: Would require minor manifest changes (Manifest V3)
+- **Firefox**: 142.0+ (required for Firefox Sync storage API)
+- **Firefox ESR**: Not supported (requires Firefox 142+)
+- **Chrome/Edge**: Would require Manifest V3 migration (see `docs/MANIFEST-V3-MIGRATION.md`)
 
 ## Troubleshooting
 
@@ -198,12 +301,17 @@ The extension specifically excludes sidebar elements using CSS selectors like `[
 
 ## Contributing
 
-Contributions are welcome! Please:
+Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
+
+**Quick Start:**
 
 1. Fork the repository
-2. Create a feature branch
-3. Make your changes with clear commit messages
-4. Submit a pull request
+2. Clone and install dependencies: `npm install`
+3. Create a feature branch: `git checkout -b feature/my-feature`
+4. Make changes and ensure tests pass: `npm test`
+5. Lint your code: `npm run lint`
+6. Commit with clear messages (pre-commit hooks run automatically)
+7. Submit a pull request
 
 ## License
 
@@ -215,162 +323,4 @@ DoubleGate - [GitHub](https://github.com/doublegate)
 
 ## Changelog
 
-### v1.9.1 (Technical Debt Remediation)
-- **New**: ESLint v9.x flat config (`eslint.config.js`) for automated code quality checks
-- **New**: Pre-commit hooks with husky and lint-staged for quality gates
-- **New**: JSDoc type definitions for Profile, CustomPreset, EnhancedSettings, and other data structures
-- **New**: Enhanced `ClaudeWidthLogger` with configurable log levels and DEBUG mode
-- **Improved**: Vitest coverage configuration documented (IIFE pattern limitation explained)
-- **Technical**: Fixed 5 ESLint errors (regex escapes, case block lexical declarations)
-- **Technical**: Added `@eslint/js` dependency for flat config support
-- **Technical**: Fresh npm dependencies (vitest 4.x, esbuild 0.27.x)
-- **Documentation**: Updated CONTRIBUTING.md with test command documentation
-- **Tests**: All 281 tests continue to pass
-
-### v1.9.0 (Sync & Profiles)
-- **New**: Configuration profiles - create up to 8 named profiles (Work, Personal, Reading, etc.)
-- **New**: Profile switcher in popup header for quick profile switching
-- **New**: Profile management in Options page - create, edit, duplicate, delete profiles
-- **New**: Browser sync support with Firefox Sync for cross-browser profile synchronization
-- **New**: Sync toggle with status indicator showing sync state and storage usage
-- **New**: Import/Export settings to JSON file for backup and transfer
-- **New**: Reset to Factory Defaults option in Options page
-- **New**: Profile-specific settings - each profile stores width, theme, presets, and all styling options
-- **New**: Toast notifications for user feedback on profile operations
-- **New**: `lib/profiles.js` module with comprehensive profile management utilities
-- **Technical**: Migration version 3 for profile system initialization
-- **Technical**: Backward compatible - existing settings migrate to "Default" profile
-- **Technical**: Storage schema: `profiles`, `activeProfileId`, `syncEnabled`, `autoProfileRules`
-- **Technical**: 100KB sync storage limit with 90KB safe threshold
-- **Technical**: Profile validation and sanitization for import safety
-- **Tests**: Added 75 new tests for profile management (281 total tests)
-
-### v1.8.4 (Toggle Control Fix)
-- **Fixed**: Word Wrap toggle in Code Blocks section now responds to clicks
-- **Fixed**: Show Timestamps toggle in Visual Tweaks section now works correctly
-- **Fixed**: Show Avatars toggle in Visual Tweaks section now works correctly
-- **Fixed**: All toggle switch controls now have proper clickable area (full switch, not just handle)
-- **Technical**: Toggle input elements now use `position: absolute; width: 100%; height: 100%` for full coverage
-- **Technical**: Added `z-index: 1` to ensure toggle inputs are above decorative slider elements
-- **Technical**: Removed `width: 0; height: 0` that was preventing click events from registering
-- **UI/UX**: Toggle switches now respond to clicks anywhere on the switch, not just the small slider handle
-
-### v1.8.3 (Advanced Styling Fix)
-- **Fixed**: Word Wrap toggle now correctly applies/removes word wrapping from code blocks
-- **Fixed**: Expand/Collapse All button properly collapses code blocks with gradient overlay
-- **Fixed**: Individual expand buttons on collapsed code blocks now function correctly
-- **Fixed**: Timestamps toggle now properly shows/hides message timestamps
-- **Fixed**: Avatars toggle now properly shows/hides user and Claude avatars
-- **Fixed**: Bubble Style options (Rounded/Square/Minimal) now apply correctly
-- **Technical**: Replaced CSS custom properties with data attributes for visibility toggles
-- **Technical**: Added DATA_ATTRS pattern (`data-claude-hide-*`, `data-claude-bubble-style`, `data-claude-code-collapsed`)
-- **Technical**: When showing elements, data attribute is removed so original styles naturally apply
-- **Technical**: When hiding elements, data attribute is set and CSS applies `display: none`
-
-### v1.8.2 (Technical Debt Remediation)
-- **Performance**: Replaced inline style manipulation with CSS custom properties for O(1) updates
-- **Refactor**: Centralized popup state management into consolidated `state` object
-- **Refactor**: Eliminated duplicate constant definitions across popup.js and constants.js
-- **Docs**: Added comprehensive JSDoc documentation for all CSS selector arrays
-- **Docs**: Documented selector design philosophy and maintenance guidelines
-- **Tests**: Comprehensive test suite with 206 tests achieving full code coverage
-- **Tests**: Unit tests for constants, popup, content script, and background modules
-- **Tests**: Integration tests for cross-module interactions
-- **Cleanup**: Removed dead code (unused enhancedDebounceTimer variable)
-- **DX**: Added helper functions (processNonSidebarElements, safeMatches, safeHasDescendant)
-- **DX**: Added cached selector strings for performance optimization
-
-### v1.8.1 (Enhanced Styling Fix)
-- **Fixed**: Real-time enhanced styling updates now work correctly
-- **Fixed**: Settings changes (typography, display mode, code blocks, etc.) apply immediately
-- **Technical**: Added applyEnhancedInlineStyles() call to handleEnhancedSettingsChange()
-- **Technical**: Added 60+ comprehensive DOM selectors for claude.ai's Tailwind CSS structure
-- **Technical**: Added clearEnhancedInlineStyles() for clean style re-application
-- **Technical**: Added applyEnhancedInlineStylesDebounced() for MutationObserver efficiency
-- **Technical**: Enhanced MutationObserver to detect enhanced-styling-relevant elements
-
-### v1.8.0 (Enhanced Styling)
-- **New**: Advanced Styling section with collapsible panels
-- **New**: Typography controls - font size (80-120%), line height, message padding
-- **New**: Display modes - Compact, Comfortable, Spacious, or Custom
-- **New**: Code block enhancements - max height, word wrap, collapse all
-- **New**: Visual tweaks - hide/show timestamps and avatars, bubble styles (rounded, square, minimal)
-- **New**: Reset All Styles button to restore all styling to defaults
-- **Changed**: Default width changed from 70% to 85%
-- **Changed**: Toolbar badge color changed from terracotta to neutral grey
-- **Technical**: Migration version 2 for enhanced styling settings
-- **Technical**: New storage keys for all enhanced styling options
-- **Refactor**: Centralized shared constants in `lib/constants.js` module
-- **Refactor**: All scripts now import from `window.ClaudeWidthConstants` global
-- **Refactor**: Extracted magic numbers to named `TIMING` constants
-- **Refactor**: Eliminated ~60 lines of duplicated constant definitions
-
-### v1.7.0 (Custom Presets)
-- **New**: Create up to 4 custom presets with custom names and widths
-- **New**: Drag-and-drop reordering of custom presets (or use Alt+Arrow keys)
-- **New**: Favorites marking - star your most-used presets
-- **New**: Right-click context menu on claude.ai with all presets
-- **New**: Recently used widths section (last 3 non-preset widths)
-- **New**: Unsaved changes indicator - visual feedback when slider differs from saved value
-- **Changed**: Default width changed from 60% to 70%
-- **Technical**: Added `contextMenus` permission for right-click menu
-- **Technical**: Migration system preserves existing user settings on upgrade
-- **Technical**: New storage keys: `customPresets`, `recentWidths`, `migrationVersion`
-
-### v1.6.0 (Keyboard & Accessibility)
-- **New**: Global keyboard shortcuts (Alt+Shift+W/C/D) for popup, preset cycling, and toggle
-- **New**: Popup keyboard shortcuts (1-4 for presets, R for reset, Escape to close)
-- **New**: Full ARIA accessibility - labels, focus trap, screen reader announcements
-- **New**: Toolbar badge showing current width percentage
-- **New**: Non-default indicator in status bar
-- **New**: Options page with keyboard shortcut documentation
-- **New**: Background script for handling global commands
-- **Accessibility**: Reduced motion support (respects `prefers-reduced-motion`)
-- **Accessibility**: High contrast mode support (Windows `forced-colors`)
-- **Accessibility**: Focus management and keyboard navigation improvements
-- **UI**: Shortcut hints displayed on preset buttons
-- All keyboard shortcuts are customizable via Firefox's extension shortcut manager
-
-### v1.5.1 (Mozilla Add-ons Compliance)
-- **Compliance**: Added `data_collection_permissions` property to manifest for Mozilla Add-on Developer Hub submission
-- Extension declares `required: ["none"]` - no user data is collected or transmitted
-- No functional changes from v1.5.0
-
-### v1.5.0 (Theme Support & Security)
-- **New**: Light/Dark/System theme toggle for extension popup
-- **New**: Dark mode color palette with warm tones matching Claude's aesthetic
-- **New**: System theme respects OS `prefers-color-scheme` setting
-- **Security**: Added Content Security Policy (CSP) to manifest
-- **Security**: Replaced `innerHTML` with safe DOM manipulation APIs
-- **UI**: Updated popup title to "Claude.AI Chat Width"
-- Theme preference persists across browser sessions via `browser.storage.local`
-
-### v1.4.0 (Public Release)
-- Updated author and repository information
-- Prepared for public GitHub release
-- No functional changes from v1.3.0
-
-### v1.3.0 (Fixed Width Application)
-- **Fixed**: Slider now properly changes width dynamically
-- Removed `isInsideMain()` check (Claude doesn't use `<main>` tag consistently)
-- Added `clearAllStyles()` function to properly reset before applying new width
-- Track styled elements in a Set for reliable cleanup
-- Enhanced debug logging to show element count
-- Force clear and reapply when width changes via storage or message
-
-### v1.2.0 (JavaScript-based Targeting)
-- Complete rewrite of styling approach
-- Uses JavaScript to find and verify elements instead of CSS selectors
-- Explicitly checks each element is NOT inside sidebar before applying styles
-- Uses inline styles for maximum specificity
-
-### v1.1.0 (Sidebar Fix Attempt)
-- Attempted CSS-based sidebar protection
-- Added `revert` keyword for sidebar elements
-
-### v1.0.0 (Initial Release)
-- Slider-based width control (40-100%)
-- Quick preset buttons
-- Real-time preview
-- Persistent storage
-- SPA navigation support
+See [CHANGELOG.md](CHANGELOG.md) for the complete version history.
