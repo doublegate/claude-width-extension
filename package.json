@@ -17,6 +17,7 @@
     "@vitest/coverage-v8": "^4.0.16",
     "@vitest/ui": "^4.0.16",
     "eslint": "^9.15.0",
+    "esbuild": "0.27.2",
     "jsdom": "^25.0.0",
     "vitest": "^4.0.16"
   },
