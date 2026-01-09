@@ -9,6 +9,9 @@ A Firefox extension that allows you to customize the width of the text input/out
 - **Adjustable Width**: Set chat width from 40% to 100% of the viewport
 - **Quick Presets**: One-click buttons for Narrow (50%), Medium (70%), Wide (85%), and Full (100%) widths
 - **Custom Presets**: Create up to 4 custom presets with your favorite widths, drag-and-drop reordering, and favorites marking
+- **Configuration Profiles** (v1.9.0): Create up to 8 named profiles (Work, Personal, etc.) with distinct settings
+- **Browser Sync** (v1.9.0): Sync profiles across browsers with Firefox Sync, with local fallback
+- **Import/Export** (v1.9.0): Backup settings to JSON, import from JSON, reset to factory defaults
 - **Context Menu**: Right-click on claude.ai pages to quickly access all presets
 - **Recently Used**: Quick access to your last 3 used widths
 - **Enhanced Styling** (v1.8.0): Advanced typography, display modes, code block controls, and visual tweaks
@@ -17,7 +20,7 @@ A Firefox extension that allows you to customize the width of the text input/out
 - **Real-time Preview**: See changes instantly as you adjust the slider
 - **Theme Support**: Light, Dark, and System theme modes for the extension popup
 - **Toolbar Badge**: Current width percentage displayed in the browser toolbar icon
-- **Persistent Settings**: Your preferences (width, theme, custom presets) are saved and applied to all Claude sessions
+- **Persistent Settings**: Your preferences (width, theme, custom presets, profiles) are saved and applied to all Claude sessions
 - **Main Window Only**: Modifies only the main chat area, leaving the sidebar untouched
 - **SPA Compatible**: Works seamlessly with Claude's single-page application navigation
 - **Security Hardened**: Content Security Policy (CSP) enforced, no unsafe DOM operations
@@ -47,7 +50,7 @@ A Firefox extension that allows you to customize the width of the text input/out
 cd claude-width-extension
 
 # Create the XPI file (ZIP with .xpi extension)
-zip -r build/claude-width-customizer-v1.8.4.xpi . -x "*.git*" -x "build/*" -x "*.DS_Store" -x "CLAUDE.md" -x ".claude/*" -x "docs/*" -x "images/*" -x "tests/*" -x "node_modules/*" -x "coverage/*" -x "*.config.js"
+zip -r build/claude-width-customizer-v1.9.0.xpi . -x "*.git*" -x "build/*" -x "*.DS_Store" -x "CLAUDE.md" -x ".claude/*" -x "docs/*" -x "images/*" -x "tests/*" -x "node_modules/*" -x "coverage/*" -x "*.config.js"
 ```
 
 ## Usage
@@ -128,7 +131,8 @@ claude-width-extension/
 │   ├── icon-96.png         # High-DPI toolbar icon (96px)
 │   └── icon-256.png        # Mozilla Add-ons listing icon (256px)
 ├── lib/
-│   └── constants.js        # Shared constants (loaded first by all scripts)
+│   ├── constants.js        # Shared constants (loaded first by all scripts)
+│   └── profiles.js         # Profile management utilities (v1.9.0)
 ├── background/
 │   └── background.js       # Background script for keyboard commands
 ├── content/
@@ -210,6 +214,24 @@ MIT License - feel free to modify and distribute.
 DoubleGate - [GitHub](https://github.com/doublegate)
 
 ## Changelog
+
+### v1.9.0 (Sync & Profiles)
+- **New**: Configuration profiles - create up to 8 named profiles (Work, Personal, Reading, etc.)
+- **New**: Profile switcher in popup header for quick profile switching
+- **New**: Profile management in Options page - create, edit, duplicate, delete profiles
+- **New**: Browser sync support with Firefox Sync for cross-browser profile synchronization
+- **New**: Sync toggle with status indicator showing sync state and storage usage
+- **New**: Import/Export settings to JSON file for backup and transfer
+- **New**: Reset to Factory Defaults option in Options page
+- **New**: Profile-specific settings - each profile stores width, theme, presets, and all styling options
+- **New**: Toast notifications for user feedback on profile operations
+- **New**: `lib/profiles.js` module with comprehensive profile management utilities
+- **Technical**: Migration version 3 for profile system initialization
+- **Technical**: Backward compatible - existing settings migrate to "Default" profile
+- **Technical**: Storage schema: `profiles`, `activeProfileId`, `syncEnabled`, `autoProfileRules`
+- **Technical**: 100KB sync storage limit with 90KB safe threshold
+- **Technical**: Profile validation and sanitization for import safety
+- **Tests**: Added 75 new tests for profile management (281 total tests)
 
 ### v1.8.4 (Toggle Control Fix)
 - **Fixed**: Word Wrap toggle in Code Blocks section now responds to clicks

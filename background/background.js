@@ -2,7 +2,7 @@
  * Claude Chat Width Customizer - Background Script
  * =================================================
  *
- * VERSION 1.8.3 - Advanced Styling Fix (Data Attributes)
+ * VERSION 1.9.0 - Sync & Profiles
  *
  * Handles keyboard shortcuts (browser.commands API), badge updates,
  * context menu management, and communication between popup and content scripts.
@@ -15,15 +15,18 @@
  * - Context menu for quick preset access on claude.ai
  * - Recent widths tracking
  * - Custom presets support
+ * - Profile management (create, switch, delete profiles)
+ * - Browser sync support (optional)
+ * - Import/export settings
  *
- * Changes from 1.7.0:
- * - Changed default width from 70% to 85%
- * - Changed badge color from terracotta to grey
- * - Added migration version 2 for enhanced styling features
- * - Added support for typography, display modes, code blocks, and visual tweaks
+ * Changes from 1.8.x:
+ * - Added profile system for multiple configuration profiles
+ * - Added browser.storage.sync support with fallback to local
+ * - Added migration version 3 for profiles
+ * - Added message handlers for profile operations
  *
  * @author DoubleGate
- * @version 1.8.3
+ * @version 1.9.0
  * @license MIT
  */
 
@@ -47,7 +50,9 @@
         MAX_RECENT_WIDTHS,
         BUILT_IN_PRESETS,
         BADGE_COLOR,
-        BADGE_TEXT_COLOR
+        BADGE_TEXT_COLOR,
+        PROFILE_STORAGE_KEYS,
+        PROFILE_DEFAULTS
     } = window.ClaudeWidthConstants;
 
     // =========================================================================
@@ -82,7 +87,7 @@
      * Current migration version.
      * @type {number}
      */
-    const CURRENT_MIGRATION_VERSION = 2;
+    const CURRENT_MIGRATION_VERSION = 3;
 
     /**
      * Alias for enhanced styling defaults (for migration compatibility).
@@ -130,6 +135,18 @@
      */
     let recentWidths = [];
 
+    /**
+     * Active profile ID (v1.9.0).
+     * @type {string}
+     */
+    let activeProfileId = 'default';
+
+    /**
+     * Active profile name (v1.9.0).
+     * @type {string}
+     */
+    let activeProfileName = 'Default';
+
     // =========================================================================
     // INITIALIZATION
     // =========================================================================
@@ -138,7 +155,7 @@
      * Initialize the background script.
      */
     async function initialize() {
-        console.log('[Claude Width Background] Initializing v1.8.3...');
+        console.log('[Claude Width Background] Initializing v1.9.0...');
 
         // Run migrations for existing users
         await runMigrations();
@@ -215,6 +232,46 @@
                     console.log('[Claude Width Background] Migration 2 complete - Enhanced styling features initialized');
                 }
 
+                // Migration 3: Create profiles from existing settings (v1.9.0)
+                if (currentMigrationVersion < 3) {
+                    // Get all existing settings
+                    const existingSettings = await browser.storage.local.get(null);
+
+                    // Create default profile from existing settings using profiles utility
+                    const defaultProfile = window.ClaudeWidthProfiles
+                        ? window.ClaudeWidthProfiles.createDefaultProfile(existingSettings)
+                        : {
+                            name: 'Default',
+                            chatWidthPercent: existingSettings[STORAGE_KEY] || DEFAULT_WIDTH,
+                            theme: existingSettings.theme || 'system',
+                            customPresets: existingSettings[CUSTOM_PRESETS_KEY] || [],
+                            ...ENHANCED_DEFAULTS,
+                            fontSizePercent: existingSettings.fontSizePercent ?? ENHANCED_DEFAULTS.fontSizePercent,
+                            lineHeight: existingSettings.lineHeight ?? ENHANCED_DEFAULTS.lineHeight,
+                            messagePadding: existingSettings.messagePadding ?? ENHANCED_DEFAULTS.messagePadding,
+                            displayMode: existingSettings.displayMode ?? ENHANCED_DEFAULTS.displayMode,
+                            codeBlockMaxHeight: existingSettings.codeBlockMaxHeight ?? ENHANCED_DEFAULTS.codeBlockMaxHeight,
+                            codeBlockWordWrap: existingSettings.codeBlockWordWrap ?? ENHANCED_DEFAULTS.codeBlockWordWrap,
+                            codeBlocksCollapsed: existingSettings.codeBlocksCollapsed ?? ENHANCED_DEFAULTS.codeBlocksCollapsed,
+                            showTimestamps: existingSettings.showTimestamps ?? ENHANCED_DEFAULTS.showTimestamps,
+                            showAvatars: existingSettings.showAvatars ?? ENHANCED_DEFAULTS.showAvatars,
+                            messageBubbleStyle: existingSettings.messageBubbleStyle ?? ENHANCED_DEFAULTS.messageBubbleStyle
+                        };
+
+                    // Initialize profiles structure
+                    const profilesData = {
+                        [PROFILE_STORAGE_KEYS.SYNC_ENABLED]: false,
+                        [PROFILE_STORAGE_KEYS.ACTIVE_PROFILE_ID]: 'default',
+                        [PROFILE_STORAGE_KEYS.PROFILES]: {
+                            'default': defaultProfile
+                        },
+                        [PROFILE_STORAGE_KEYS.AUTO_PROFILE_RULES]: []
+                    };
+
+                    await browser.storage.local.set(profilesData);
+                    console.log('[Claude Width Background] Migration 3 complete - Profile system initialized');
+                }
+
                 // Update migration version to current
                 await browser.storage.local.set({ [MIGRATION_VERSION_KEY]: CURRENT_MIGRATION_VERSION });
                 console.log(`[Claude Width Background] Migration version updated to ${CURRENT_MIGRATION_VERSION}`);
@@ -233,7 +290,9 @@
                 STORAGE_KEY,
                 CUSTOM_PRESETS_KEY,
                 HIDDEN_PRESETS_KEY,
-                RECENT_WIDTHS_KEY
+                RECENT_WIDTHS_KEY,
+                PROFILE_STORAGE_KEYS.ACTIVE_PROFILE_ID,
+                PROFILE_STORAGE_KEYS.PROFILES
             ]);
 
             // Load current width
@@ -259,13 +318,22 @@
                 recentWidths = result[RECENT_WIDTHS_KEY];
             }
 
-            console.log(`[Claude Width Background] State loaded: width=${currentWidth}%, customPresets=${customPresets.length}, recentWidths=${recentWidths.length}`);
+            // Load active profile info (v1.9.0)
+            activeProfileId = result[PROFILE_STORAGE_KEYS.ACTIVE_PROFILE_ID] || 'default';
+            const profiles = result[PROFILE_STORAGE_KEYS.PROFILES] || {};
+            if (profiles[activeProfileId]) {
+                activeProfileName = profiles[activeProfileId].name || 'Default';
+            }
+
+            console.log(`[Claude Width Background] State loaded: width=${currentWidth}%, profile="${activeProfileName}", customPresets=${customPresets.length}, recentWidths=${recentWidths.length}`);
         } catch (error) {
             console.error('[Claude Width Background] Error loading state:', error);
             currentWidth = DEFAULT_WIDTH;
             customPresets = [];
             hiddenBuiltInPresets = [];
             recentWidths = [];
+            activeProfileId = 'default';
+            activeProfileName = 'Default';
         }
     }
 
@@ -744,7 +812,9 @@
                     recentWidths: recentWidths,
                     builtInPresets: BUILT_IN_PRESETS,
                     defaultWidth: DEFAULT_WIDTH,
-                    maxCustomPresets: MAX_CUSTOM_PRESETS
+                    maxCustomPresets: MAX_CUSTOM_PRESETS,
+                    activeProfileId: activeProfileId,
+                    activeProfileName: activeProfileName
                 });
                 break;
 
@@ -772,10 +842,186 @@
                 });
                 return true; // Async response
 
+            // Profile operations (v1.9.0)
+            case 'getProfiles':
+                if (window.ClaudeWidthProfiles) {
+                    window.ClaudeWidthProfiles.loadProfileData().then(data => {
+                        sendResponse({ success: true, ...data });
+                    }).catch(error => {
+                        sendResponse({ success: false, error: error.message });
+                    });
+                } else {
+                    sendResponse({ success: false, error: 'Profiles module not loaded' });
+                }
+                return true;
+
+            case 'switchProfile':
+                if (window.ClaudeWidthProfiles) {
+                    window.ClaudeWidthProfiles.setActiveProfile(message.profileId).then(async result => {
+                        if (result.success) {
+                            // Apply profile settings to flat storage for content script
+                            await window.ClaudeWidthProfiles.applyActiveProfileToStorage();
+                            // Reload state to update background script state
+                            await loadState();
+                            // Notify all Claude tabs
+                            await notifyAllClaudeTabs();
+                            updateBadgeForActiveTab();
+                        }
+                        sendResponse(result);
+                    }).catch(error => {
+                        sendResponse({ success: false, error: error.message });
+                    });
+                } else {
+                    sendResponse({ success: false, error: 'Profiles module not loaded' });
+                }
+                return true;
+
+            case 'createProfile':
+                if (window.ClaudeWidthProfiles) {
+                    window.ClaudeWidthProfiles.addProfile(message.name, message.settings).then(result => {
+                        sendResponse(result);
+                    }).catch(error => {
+                        sendResponse({ success: false, error: error.message });
+                    });
+                } else {
+                    sendResponse({ success: false, error: 'Profiles module not loaded' });
+                }
+                return true;
+
+            case 'updateProfile':
+                if (window.ClaudeWidthProfiles) {
+                    window.ClaudeWidthProfiles.updateProfileById(message.profileId, message.updates).then(async result => {
+                        if (result.success && message.profileId === activeProfileId) {
+                            // If active profile was updated, apply changes
+                            await window.ClaudeWidthProfiles.applyActiveProfileToStorage();
+                            await loadState();
+                            await notifyAllClaudeTabs();
+                            updateBadgeForActiveTab();
+                        }
+                        sendResponse(result);
+                    }).catch(error => {
+                        sendResponse({ success: false, error: error.message });
+                    });
+                } else {
+                    sendResponse({ success: false, error: 'Profiles module not loaded' });
+                }
+                return true;
+
+            case 'deleteProfile':
+                if (window.ClaudeWidthProfiles) {
+                    window.ClaudeWidthProfiles.deleteProfile(message.profileId).then(async result => {
+                        if (result.success) {
+                            await loadState();
+                            await notifyAllClaudeTabs();
+                            updateBadgeForActiveTab();
+                        }
+                        sendResponse(result);
+                    }).catch(error => {
+                        sendResponse({ success: false, error: error.message });
+                    });
+                } else {
+                    sendResponse({ success: false, error: 'Profiles module not loaded' });
+                }
+                return true;
+
+            case 'exportSettings':
+                if (window.ClaudeWidthProfiles) {
+                    window.ClaudeWidthProfiles.exportSettings().then(data => {
+                        sendResponse({ success: true, data: data });
+                    }).catch(error => {
+                        sendResponse({ success: false, error: error.message });
+                    });
+                } else {
+                    sendResponse({ success: false, error: 'Profiles module not loaded' });
+                }
+                return true;
+
+            case 'importSettings':
+                if (window.ClaudeWidthProfiles) {
+                    window.ClaudeWidthProfiles.importSettings(message.data, message.options).then(async result => {
+                        if (result.success) {
+                            await window.ClaudeWidthProfiles.applyActiveProfileToStorage();
+                            await loadState();
+                            await createContextMenu();
+                            await notifyAllClaudeTabs();
+                            updateBadgeForActiveTab();
+                        }
+                        sendResponse(result);
+                    }).catch(error => {
+                        sendResponse({ success: false, error: error.message });
+                    });
+                } else {
+                    sendResponse({ success: false, error: 'Profiles module not loaded' });
+                }
+                return true;
+
+            case 'resetToDefaults':
+                if (window.ClaudeWidthProfiles) {
+                    window.ClaudeWidthProfiles.resetToDefaults().then(async result => {
+                        if (result.success) {
+                            await window.ClaudeWidthProfiles.applyActiveProfileToStorage();
+                            await loadState();
+                            await createContextMenu();
+                            await notifyAllClaudeTabs();
+                            updateBadgeForActiveTab();
+                        }
+                        sendResponse(result);
+                    }).catch(error => {
+                        sendResponse({ success: false, error: error.message });
+                    });
+                } else {
+                    sendResponse({ success: false, error: 'Profiles module not loaded' });
+                }
+                return true;
+
+            case 'setSyncEnabled':
+                if (window.ClaudeWidthProfiles) {
+                    window.ClaudeWidthProfiles.setSyncEnabled(message.enabled).then(result => {
+                        sendResponse(result);
+                    }).catch(error => {
+                        sendResponse({ success: false, error: error.message });
+                    });
+                } else {
+                    sendResponse({ success: false, error: 'Profiles module not loaded' });
+                }
+                return true;
+
+            case 'getSyncStatus':
+                if (window.ClaudeWidthProfiles) {
+                    window.ClaudeWidthProfiles.getSyncStatus().then(status => {
+                        sendResponse({ success: true, ...status });
+                    }).catch(error => {
+                        sendResponse({ success: false, error: error.message });
+                    });
+                } else {
+                    sendResponse({ success: false, error: 'Profiles module not loaded' });
+                }
+                return true;
+
             default:
                 sendResponse({ success: false, error: 'Unknown action' });
         }
     });
+
+    /**
+     * Notify all Claude tabs of settings changes (v1.9.0).
+     */
+    async function notifyAllClaudeTabs() {
+        try {
+            const tabs = await browser.tabs.query({ url: '*://claude.ai/*' });
+            for (const tab of tabs) {
+                try {
+                    await browser.tabs.sendMessage(tab.id, {
+                        action: 'profileChanged'
+                    });
+                } catch (e) {
+                    // Tab might not have content script loaded
+                }
+            }
+        } catch (error) {
+            console.log('[Claude Width Background] Could not notify Claude tabs');
+        }
+    }
 
     // =========================================================================
     // ENTRY POINT

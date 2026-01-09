@@ -282,7 +282,35 @@ export function installMockConstants() {
     DEFAULT_THEME: 'system',
     VALID_THEMES: ['light', 'dark', 'system'],
     BADGE_COLOR: '#6B7280',
-    BADGE_TEXT_COLOR: '#FFFFFF'
+    BADGE_TEXT_COLOR: '#FFFFFF',
+
+    // Profile configuration (v1.9.0)
+    MAX_PROFILES: 8,
+    PROFILE_NAME_MAX_LENGTH: 30,
+    PROFILE_STORAGE_KEYS: {
+      SYNC_ENABLED: 'syncEnabled',
+      ACTIVE_PROFILE_ID: 'activeProfileId',
+      PROFILES: 'profiles',
+      AUTO_PROFILE_RULES: 'autoProfileRules'
+    },
+    PROFILE_DEFAULTS: {
+      chatWidthPercent: 85,
+      theme: 'system',
+      customPresets: [],
+      fontSizePercent: 100,
+      lineHeight: 'normal',
+      messagePadding: 'medium',
+      displayMode: 'comfortable',
+      codeBlockMaxHeight: 400,
+      codeBlockWordWrap: false,
+      codeBlocksCollapsed: false,
+      showTimestamps: true,
+      showAvatars: true,
+      messageBubbleStyle: 'rounded'
+    },
+    EXPORT_VERSION: 1,
+    SYNC_QUOTA_BYTES: 102400,
+    SYNC_SAFE_LIMIT: 90000
   };
 
   window.ClaudeWidthLogger = {

@@ -2,11 +2,16 @@
  * Claude Chat Width Customizer - Content Script
  * ==============================================
  *
- * VERSION 1.8.3 - Fixed Visual Tweaks and Code Block Features
+ * VERSION 1.9.0 - Sync & Profiles Support
  *
  * Injected into claude.ai pages to apply width customizations to the chat area.
  * Works with the background script to handle keyboard shortcuts for preset
  * cycling and default toggling.
+ *
+ * Changes from 1.8.3:
+ * - NEW: Profile switch handling via 'profileChanged' message
+ * - NEW: Reloads settings when active profile changes
+ * - UPDATED: Version bump to 1.9.0 for Sync & Profiles release
  *
  * Changes from 1.8.2:
  * - FIXED: Avatar/Timestamp visibility using data attributes instead of display:block/inline
@@ -23,7 +28,7 @@
  * - PERFORMANCE: Eliminated O(n) DOM queries - now O(1) root element updates
  *
  * @author DoubleGate
- * @version 1.8.3
+ * @version 1.9.0
  * @license MIT
  */
 
@@ -43,7 +48,8 @@
         ENHANCED_KEYS,
         ENHANCED_DEFAULTS,
         DISPLAY_MODE_PRESETS,
-        TIMING
+        TIMING,
+        PROFILE_STORAGE_KEYS
     } = window.ClaudeWidthConstants;
 
     // Aliases for backward compatibility within this file
@@ -1434,6 +1440,42 @@
     // STORAGE HANDLING
     // =========================================================================
 
+    /**
+     * Reload all settings from storage (used when profile changes).
+     * Clears existing styles and reapplies with new settings.
+     */
+    async function reloadAllSettings() {
+        console.log('[Claude Width] Reloading all settings...');
+
+        // Clear existing styles
+        clearAllStyles();
+        clearEnhancedInlineStyles();
+
+        // Reload width preference
+        const savedWidth = await loadWidthPreference();
+        currentWidth = savedWidth;
+
+        // Reload enhanced settings
+        await loadEnhancedSettings();
+
+        // Re-inject CSS
+        injectMinimalCSS();
+        injectEnhancedCSS();
+
+        // Apply styles
+        applyWidthToChat(currentWidth);
+        applyEnhancedInlineStyles();
+
+        // Apply collapsed code blocks if enabled
+        if (enhancedSettings[ENHANCED_KEYS.CODE_BLOCKS_COLLAPSED]) {
+            toggleAllCodeBlocks(true);
+        } else {
+            toggleAllCodeBlocks(false);
+        }
+
+        console.log(`[Claude Width] Settings reloaded. Width: ${currentWidth}%`);
+    }
+
     async function loadWidthPreference() {
         try {
             const result = await browser.storage.local.get(STORAGE_KEY);
@@ -1636,6 +1678,18 @@
                 sendResponse({ success: true });
                 break;
 
+            // Profile switch handling (v1.9.0)
+            case 'profileChanged':
+                console.log('[Claude Width] Profile changed, reloading settings...');
+                // Reload all settings from storage
+                reloadAllSettings().then(() => {
+                    sendResponse({ success: true, currentWidth: currentWidth });
+                }).catch(error => {
+                    console.error('[Claude Width] Error reloading settings:', error);
+                    sendResponse({ success: false, error: error.message });
+                });
+                return true; // Async response
+
             default:
                 sendResponse({ success: false, error: 'Unknown action' });
         }
@@ -1648,7 +1702,7 @@
     // =========================================================================
 
     async function initialize() {
-        console.log('[Claude Width] Initializing content script v1.8.2...');
+        console.log('[Claude Width] Initializing content script v1.9.0...');
 
         try {
             // Load saved width preference

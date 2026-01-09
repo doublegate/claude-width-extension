@@ -4,13 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Firefox extension (Manifest V2) that customizes the chat width on claude.ai. Allows users to adjust the main chat area from 40-100% width via a popup UI, without affecting the sidebar. Version 1.8.4 fixes non-clickable toggle switches in the popup by expanding checkbox input coverage to the full toggle area. Includes enhanced styling for typography controls (font size, line height, padding), display modes (compact, comfortable, spacious, custom), code block enhancements (max-height, word wrap, collapse all), and visual tweaks (timestamps, avatars, bubble styles).
+Firefox extension (Manifest V2) that customizes the chat width on claude.ai. Allows users to adjust the main chat area from 40-100% width via a popup UI, without affecting the sidebar. Version 1.9.0 adds configuration profiles with browser sync support, allowing users to create up to 8 named profiles with distinct settings. Includes enhanced styling for typography controls (font size, line height, padding), display modes (compact, comfortable, spacious, custom), code block enhancements (max-height, word wrap, collapse all), and visual tweaks (timestamps, avatars, bubble styles). Settings can be imported/exported as JSON and synced across browsers via Firefox Sync.
 
 ## Build & Development
 
 ```bash
 # Build XPI package (from project root)
-zip -r build/claude-width-customizer-v1.8.4.xpi . -x "*.git*" -x "build/*" -x "*.DS_Store" -x "CLAUDE.md" -x ".claude/*" -x "docs/*" -x "images/*" -x "tests/*" -x "node_modules/*" -x "coverage/*" -x "*.config.js"
+zip -r build/claude-width-customizer-v1.9.0.xpi . -x "*.git*" -x "build/*" -x "*.DS_Store" -x "CLAUDE.md" -x ".claude/*" -x "docs/*" -x "images/*" -x "tests/*" -x "node_modules/*" -x "coverage/*" -x "*.config.js"
 
 # Development testing (no build step required)
 # 1. Open Firefox → about:debugging → This Firefox
@@ -18,7 +18,7 @@ zip -r build/claude-width-customizer-v1.8.4.xpi . -x "*.git*" -x "build/*" -x "*
 # 3. Extension reloads on manifest.json reload
 
 # Run tests (requires npm install)
-npm test              # Run all 206 tests
+npm test              # Run all 281 tests
 npm run test:coverage # Run with coverage report
 npm run test:watch    # Run in watch mode
 npm run check         # Verify JS syntax
@@ -31,7 +31,7 @@ Development dependencies (devDependencies only - not required for extension):
 
 ## Architecture
 
-### Communication Flow (v1.8.0)
+### Communication Flow (v1.9.0)
 
 ```
                             browser.commands API
@@ -51,13 +51,14 @@ popup.js ──storage.local.set()──> browser.storage      Badge/Context Men
 
 1. **Background Script** (`background/background.js`): Handles global keyboard shortcuts (Alt+Shift+W/C/D), manages toolbar badge, context menu, migration, recent widths
 2. **Popup** (`popup/popup.js`): Width slider/presets, custom preset CRUD, drag-and-drop, favorites, local keyboard shortcuts (1-4, R, Esc)
-3. **Storage**: Preferences saved to `browser.storage.local` with keys: `chatWidthPercent`, `customPresets`, `hiddenBuiltInPresets`, `recentWidths`, `migrationVersion`
-4. **Content Script** (`content/content.js`): Receives updates via:
+3. **Storage**: Preferences saved to `browser.storage.local` (or `sync` when enabled) with keys: `chatWidthPercent`, `customPresets`, `hiddenBuiltInPresets`, `recentWidths`, `migrationVersion`, `profiles`, `activeProfileId`, `syncEnabled`
+4. **Profile System** (`lib/profiles.js`): Manages multiple configuration profiles with CRUD operations, import/export, validation, and sync support
+5. **Content Script** (`content/content.js`): Receives updates via:
    - `browser.storage.onChanged` listener (triggers on storage change)
    - `browser.runtime.onMessage` listener (direct messages from popup/background)
-   - Handles `cyclePresets` and `toggleDefault` message actions
-5. **DOM**: Width applied via inline styles with `!important` to override Claude's React styles
-6. **Options Page** (`options/`): Documentation for keyboard shortcuts, link to Firefox shortcut manager
+   - Handles `cyclePresets`, `toggleDefault`, and `profileChanged` message actions
+6. **DOM**: Width applied via inline styles with `!important` to override Claude's React styles
+7. **Options Page** (`options/`): Profile management, sync toggle, import/export, keyboard shortcuts documentation
 
 ### Key Mechanism: Sidebar Exclusion
 
@@ -118,7 +119,14 @@ Shared constants are centralized in `lib/constants.js` and accessed via `window.
 | `ENHANCED_DEFAULTS` | Object | Default values for enhanced styling |
 | `DISPLAY_MODE_PRESETS` | Object | Display mode preset configurations |
 | `TIMING` | Object | Timing constants (debounce, animation, etc.) |
-| `CURRENT_MIGRATION_VERSION` | 2 | Migration version (local to background.js) |
+| `MAX_PROFILES` | 8 | Maximum number of profiles allowed |
+| `PROFILE_NAME_MAX_LENGTH` | 30 | Maximum characters for profile names |
+| `PROFILE_STORAGE_KEYS` | Object | Storage keys for profile system |
+| `PROFILE_DEFAULTS` | Object | Default values for new profiles |
+| `EXPORT_VERSION` | 1 | Import/export format version |
+| `SYNC_QUOTA_BYTES` | 102400 | Firefox sync storage limit (100KB) |
+| `SYNC_SAFE_LIMIT` | 90000 | Safe threshold for sync storage (90KB) |
+| `CURRENT_MIGRATION_VERSION` | 3 | Migration version (local to background.js) |
 
 ## Keyboard Shortcuts
 
@@ -239,17 +247,60 @@ The Advanced Styling section provides fine-grained control over Claude's chat ap
 - `showAvatars`: true/false (default: true)
 - `messageBubbleStyle`: 'rounded', 'square', 'minimal' (default: 'rounded')
 
+## Profile System (v1.9.0)
+
+The profile system allows users to maintain multiple configuration profiles with distinct settings:
+
+### Profile Structure
+Each profile stores:
+- `name`: Profile name (max 30 characters)
+- `chatWidthPercent`: Width setting (40-100%)
+- `theme`: Theme preference (light/dark/system)
+- `customPresets`: Array of custom presets
+- All enhanced styling settings (typography, display mode, code blocks, visual tweaks)
+
+### Storage Schema
+```javascript
+{
+    syncEnabled: boolean,        // Whether to use browser.storage.sync
+    activeProfileId: string,     // Currently active profile ID
+    profiles: {                  // Profile objects keyed by ID
+        'default': { ... },
+        'profile_xxx_yyy': { ... }
+    },
+    autoProfileRules: []         // URL pattern to profile ID mappings
+}
+```
+
+### Profile Management (lib/profiles.js)
+The profiles module exposes `window.ClaudeWidthProfiles` with:
+- **CRUD**: `createProfile()`, `updateProfile()`, `duplicateProfile()`, `deleteProfile()`
+- **Validation**: `validateProfileName()`, `validateProfile()`, `validateImportData()`
+- **Sanitization**: `sanitizeProfile()`, `sanitizeEnhancedSettings()`
+- **Storage**: `loadProfileData()`, `saveProfileData()`, `getActiveProfile()`, `setActiveProfile()`
+- **Import/Export**: `exportSettings()`, `importSettings()`, `resetToDefaults()`
+- **Sync**: `setSyncEnabled()`, `getSyncStatus()`
+- **URL Matching**: `matchUrlPattern()`, `getAutoProfileForUrl()`, `addAutoProfileRule()`
+
+### Migration (v3)
+When upgrading from v1.8.x, the migration:
+1. Preserves existing flat settings by creating a "Default" profile
+2. Sets `activeProfileId` to 'default'
+3. Initializes `syncEnabled` to false
+4. Copies current width, theme, presets, and enhanced styling to the default profile
+
 ## File Structure
 
 ```
 claude-width-extension/
-├── manifest.json              # Extension manifest (Manifest V2, v1.8.4)
+├── manifest.json              # Extension manifest (Manifest V2, v1.9.0)
 ├── README.md                  # User documentation
 ├── CONTRIBUTING.md            # Contribution guidelines
 ├── LICENSE                    # MIT license
 ├── .gitignore                 # Git exclusions
 ├── lib/
-│   └── constants.js           # Shared constants (loaded first by all scripts)
+│   ├── constants.js           # Shared constants (loaded first by all scripts)
+│   └── profiles.js            # Profile management utilities (v1.9.0)
 ├── background/
 │   └── background.js          # Keyboard shortcuts, badge, context menu, migration
 ├── content/
@@ -276,6 +327,7 @@ claude-width-extension/
 │   ├── mocks/
 │   │   └── browser.js         # Browser API mock for testing
 │   ├── constants.test.js      # Unit tests for lib/constants.js
+│   ├── profiles.test.js       # Unit tests for lib/profiles.js (v1.9.0)
 │   ├── popup.test.js          # Unit tests for popup/popup.js
 │   ├── content.test.js        # Unit tests for content/content.js
 │   ├── background.test.js     # Unit tests for background/background.js
@@ -299,6 +351,7 @@ When Claude updates their UI, selectors may break. Debug process:
 
 | Version | Date | Highlights |
 |---------|------|------------|
+| v1.9.0 | 2026-01-08 | Configuration profiles with browser sync, import/export, up to 8 profiles |
 | v1.8.4 | 2026-01-08 | Fixed non-clickable toggle switches in Advanced Styling popup controls |
 | v1.8.3 | 2026-01-08 | Fixed visibility toggles, bubble styles, code block features using data attributes |
 | v1.8.2 | 2026-01-08 | Technical debt remediation, CSS custom properties, test suite (206 tests) |

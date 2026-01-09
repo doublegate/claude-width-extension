@@ -3,12 +3,11 @@
   Claude Chat Width Customizer - Options Page
   ===========================================
 
-  Allows users to view and customize keyboard shortcuts.
-  Firefox requires users to customize shortcuts via about:addons,
-  so this page primarily serves as documentation and a link to the settings.
+  Allows users to manage profiles, sync settings, import/export,
+  and view keyboard shortcuts documentation.
 
   @author DoubleGate
-  @version 1.8.3
+  @version 1.9.0
 -->
 <html lang="en">
 <head>
@@ -19,6 +18,9 @@
 </head>
 <body>
     <div class="options-container">
+        <!-- Screen Reader Live Region -->
+        <div id="srAnnouncements" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></div>
+
         <!-- Header -->
         <header class="options-header">
             <div class="header-content">
@@ -29,13 +31,197 @@
                 </svg>
                 <div class="header-text">
                     <h1>Claude Chat Width</h1>
-                    <span class="version">v1.8.3</span>
+                    <span class="version">v1.9.0</span>
                 </div>
             </div>
         </header>
 
         <!-- Main Content -->
         <main class="options-main">
+            <!-- Profiles Section (v1.9.0) -->
+            <section class="options-section" aria-labelledby="profiles-heading">
+                <h2 id="profiles-heading">
+                    <svg class="section-icon" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                        <circle cx="8" cy="4" r="3" stroke="currentColor" stroke-width="1.5"/>
+                        <path d="M2 14C2 11.2386 4.23858 9 7 9H9C11.7614 9 14 11.2386 14 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                    </svg>
+                    Profiles
+                    <span class="new-badge">New in v1.9.0</span>
+                </h2>
+
+                <p class="section-description">
+                    Create multiple profiles to save different width and styling configurations.
+                    Switch between them instantly from the popup.
+                </p>
+
+                <!-- Profile List -->
+                <div class="profile-manager">
+                    <div class="profile-list-header">
+                        <span class="profile-count" id="profileCount">Loading profiles...</span>
+                        <button class="btn btn-small btn-primary" id="createProfileBtn" type="button">
+                            <svg class="btn-icon" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                                <path d="M8 3V13M3 8H13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                            </svg>
+                            New Profile
+                        </button>
+                    </div>
+
+                    <div class="profile-list" id="profileList" role="list" aria-label="Saved profiles">
+                        <!-- Profiles populated by JavaScript -->
+                    </div>
+                </div>
+
+                <div class="profile-note">
+                    <svg class="note-icon" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                        <circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.5"/>
+                        <path d="M8 5V5.5M8 7V11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                    </svg>
+                    <p>
+                        You can have up to <strong>8 profiles</strong>. Each profile stores width settings,
+                        custom presets, and enhanced styling preferences.
+                    </p>
+                </div>
+            </section>
+
+            <!-- Sync Section (v1.9.0) -->
+            <section class="options-section" aria-labelledby="sync-heading">
+                <h2 id="sync-heading">
+                    <svg class="section-icon" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                        <path d="M1 8C1 4.13401 4.13401 1 8 1C10.7614 1 13.1412 2.62275 14.2304 5M15 8C15 11.866 11.866 15 8 15C5.23858 15 2.85885 13.3772 1.76959 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                        <path d="M11 5H14.5V1.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M5 11H1.5V14.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    Browser Sync
+                    <span class="new-badge">New in v1.9.0</span>
+                </h2>
+
+                <p class="section-description">
+                    Sync your profiles across browsers using Firefox Sync.
+                </p>
+
+                <div class="sync-controls">
+                    <div class="sync-toggle-row">
+                        <div class="sync-toggle-info">
+                            <span class="sync-toggle-label">Enable Sync</span>
+                            <span class="sync-toggle-description">Synchronize profiles across all your Firefox browsers</span>
+                        </div>
+                        <label class="toggle-switch" for="syncEnabledToggle">
+                            <input type="checkbox" id="syncEnabledToggle" aria-describedby="syncStatusText">
+                            <span class="toggle-slider"></span>
+                            <span class="sr-only">Enable browser sync</span>
+                        </label>
+                    </div>
+
+                    <div class="sync-status" id="syncStatus">
+                        <div class="sync-status-icon" id="syncStatusIcon" aria-hidden="true">
+                            <svg class="icon-local" viewBox="0 0 16 16" fill="none">
+                                <rect x="3" y="6" width="10" height="8" rx="1" stroke="currentColor" stroke-width="1.5"/>
+                                <path d="M5 6V4C5 2.34315 6.34315 1 8 1C9.65685 1 11 2.34315 11 4V6" stroke="currentColor" stroke-width="1.5"/>
+                            </svg>
+                            <svg class="icon-synced" viewBox="0 0 16 16" fill="none">
+                                <path d="M4.5 8L7 10.5L11.5 5.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                                <circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.5"/>
+                            </svg>
+                        </div>
+                        <span class="sync-status-text" id="syncStatusText">Stored locally only</span>
+                    </div>
+                </div>
+
+                <div class="sync-note">
+                    <svg class="note-icon" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                        <circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.5"/>
+                        <path d="M8 5V5.5M8 7V11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                    </svg>
+                    <p>
+                        Sync storage has a <strong>100KB limit</strong>. If you exceed this limit,
+                        sync will be disabled automatically and settings will be stored locally.
+                    </p>
+                </div>
+            </section>
+
+            <!-- Import/Export Section (v1.9.0) -->
+            <section class="options-section" aria-labelledby="backup-heading">
+                <h2 id="backup-heading">
+                    <svg class="section-icon" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                        <path d="M8 1V11M8 11L5 8M8 11L11 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M2 13V14C2 14.5523 2.44772 15 3 15H13C13.5523 15 14 14.5523 14 14V13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                    </svg>
+                    Backup & Restore
+                    <span class="new-badge">New in v1.9.0</span>
+                </h2>
+
+                <p class="section-description">
+                    Export all your profiles and settings to a file, or import from a backup.
+                </p>
+
+                <div class="backup-actions">
+                    <div class="backup-action-group">
+                        <h3 class="backup-action-title">Export Settings</h3>
+                        <p class="backup-action-description">
+                            Download all profiles and settings as a JSON file.
+                        </p>
+                        <button class="btn btn-primary" id="exportBtn" type="button">
+                            <svg class="btn-icon" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                                <path d="M8 1V11M8 11L5 8M8 11L11 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                                <path d="M2 13V14C2 14.5523 2.44772 15 3 15H13C13.5523 15 14 14.5523 14 14V13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                            </svg>
+                            Export to File
+                        </button>
+                    </div>
+
+                    <div class="backup-action-group">
+                        <h3 class="backup-action-title">Import Settings</h3>
+                        <p class="backup-action-description">
+                            Restore profiles and settings from a backup file.
+                        </p>
+                        <label class="btn btn-secondary import-label" for="importFileInput">
+                            <svg class="btn-icon" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                                <path d="M8 11V1M8 1L5 4M8 1L11 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                                <path d="M2 13V14C2 14.5523 2.44772 15 3 15H13C13.5523 15 14 14.5523 14 14V13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                            </svg>
+                            Import from File
+                            <input type="file" id="importFileInput" accept=".json" class="sr-only">
+                        </label>
+                    </div>
+                </div>
+
+                <div class="backup-note warning">
+                    <svg class="note-icon" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                        <path d="M8 1L1 15H15L8 1Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+                        <path d="M8 6V9M8 11V11.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                    </svg>
+                    <p>
+                        <strong>Warning:</strong> Importing settings will replace all existing profiles.
+                        Export your current settings first if you want to keep them.
+                    </p>
+                </div>
+            </section>
+
+            <!-- Reset Section (v1.9.0) -->
+            <section class="options-section" aria-labelledby="reset-heading">
+                <h2 id="reset-heading">
+                    <svg class="section-icon" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                        <path d="M2 8C2 4.68629 4.68629 2 8 2C10.5264 2 12.6845 3.5566 13.5962 5.75M14 8C14 11.3137 11.3137 14 8 14C5.47362 14 3.31547 12.4434 2.40385 10.25" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                        <path d="M14 2V6H10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M2 14V10H6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    Reset to Defaults
+                </h2>
+
+                <p class="section-description">
+                    Reset all settings to their factory defaults. This will delete all profiles
+                    and custom presets.
+                </p>
+
+                <button class="btn btn-danger" id="resetBtn" type="button">
+                    <svg class="btn-icon" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                        <path d="M2 4H14M5 4V2H11V4M6 7V12M10 7V12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M3 4L4 14H12L13 4" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+                    </svg>
+                    Reset All Settings
+                </button>
+            </section>
+
             <!-- Keyboard Shortcuts Section -->
             <section class="options-section" aria-labelledby="shortcuts-heading">
                 <h2 id="shortcuts-heading">
@@ -289,6 +475,139 @@
         </footer>
     </div>
 
+    <!-- Profile Edit Modal -->
+    <div class="modal-overlay" id="profileModal" hidden aria-hidden="true">
+        <div class="modal" role="dialog" aria-labelledby="profileModalTitle" aria-describedby="profileModalDesc">
+            <div class="modal-header">
+                <h3 class="modal-title" id="profileModalTitle">New Profile</h3>
+                <button class="modal-close" id="profileModalClose" type="button" aria-label="Close modal">
+                    <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                        <path d="M4 4L12 12M4 12L12 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p class="modal-description" id="profileModalDesc">Enter a name for your profile.</p>
+                <div class="form-group">
+                    <label for="profileNameInput" class="form-label">Profile Name</label>
+                    <input type="text" id="profileNameInput" class="form-input" maxlength="30" placeholder="e.g., Work, Personal, Reading">
+                    <span class="form-hint" id="profileNameHint">Maximum 30 characters</span>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="profileModalCancel" type="button">Cancel</button>
+                <button class="btn btn-primary" id="profileModalSave" type="button">Save Profile</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Reset Confirmation Modal -->
+    <div class="modal-overlay" id="resetModal" hidden aria-hidden="true">
+        <div class="modal modal-danger" role="alertdialog" aria-labelledby="resetModalTitle" aria-describedby="resetModalDesc">
+            <div class="modal-header">
+                <h3 class="modal-title" id="resetModalTitle">Reset All Settings?</h3>
+                <button class="modal-close" id="resetModalClose" type="button" aria-label="Close modal">
+                    <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                        <path d="M4 4L12 12M4 12L12 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="modal-warning">
+                    <svg class="warning-icon" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                        <path d="M8 1L1 15H15L8 1Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+                        <path d="M8 6V9M8 11V11.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                    </svg>
+                    <p id="resetModalDesc">
+                        This action cannot be undone. All profiles, custom presets, and settings will be
+                        permanently deleted and reset to factory defaults.
+                    </p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="resetModalCancel" type="button">Cancel</button>
+                <button class="btn btn-danger" id="resetModalConfirm" type="button">Reset Everything</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Import Confirmation Modal -->
+    <div class="modal-overlay" id="importModal" hidden aria-hidden="true">
+        <div class="modal modal-warning" role="alertdialog" aria-labelledby="importModalTitle" aria-describedby="importModalDesc">
+            <div class="modal-header">
+                <h3 class="modal-title" id="importModalTitle">Import Settings?</h3>
+                <button class="modal-close" id="importModalClose" type="button" aria-label="Close modal">
+                    <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                        <path d="M4 4L12 12M4 12L12 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="modal-warning">
+                    <svg class="warning-icon" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                        <path d="M8 1L1 15H15L8 1Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+                        <path d="M8 6V9M8 11V11.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                    </svg>
+                    <p id="importModalDesc">
+                        Importing will replace all existing profiles and settings. Make sure you have
+                        exported your current settings if you want to keep them.
+                    </p>
+                </div>
+                <div class="import-preview" id="importPreview">
+                    <h4 class="import-preview-title">Import Preview</h4>
+                    <div class="import-preview-content" id="importPreviewContent">
+                        <!-- Populated by JavaScript -->
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="importModalCancel" type="button">Cancel</button>
+                <button class="btn btn-primary" id="importModalConfirm" type="button">Import Settings</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Profile Confirmation Modal -->
+    <div class="modal-overlay" id="deleteProfileModal" hidden aria-hidden="true">
+        <div class="modal modal-danger" role="alertdialog" aria-labelledby="deleteProfileModalTitle" aria-describedby="deleteProfileModalDesc">
+            <div class="modal-header">
+                <h3 class="modal-title" id="deleteProfileModalTitle">Delete Profile?</h3>
+                <button class="modal-close" id="deleteProfileModalClose" type="button" aria-label="Close modal">
+                    <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                        <path d="M4 4L12 12M4 12L12 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p id="deleteProfileModalDesc">
+                    Are you sure you want to delete the profile "<span id="deleteProfileName"></span>"?
+                    This action cannot be undone.
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="deleteProfileModalCancel" type="button">Cancel</button>
+                <button class="btn btn-danger" id="deleteProfileModalConfirm" type="button">Delete Profile</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div class="toast" id="toast" hidden aria-live="assertive" aria-atomic="true">
+        <div class="toast-content">
+            <svg class="toast-icon toast-icon-success" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                <path d="M4.5 8L7 10.5L11.5 5.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                <circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.5"/>
+            </svg>
+            <svg class="toast-icon toast-icon-error" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                <circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.5"/>
+                <path d="M5.5 5.5L10.5 10.5M5.5 10.5L10.5 5.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+            <span class="toast-message" id="toastMessage"></span>
+        </div>
+    </div>
+
+    <script src="../lib/constants.js"></script>
+    <script src="../lib/profiles.js"></script>
     <script src="options.js"></script>
 </body>
 </html>

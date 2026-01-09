@@ -27,10 +27,11 @@
  * - Alt+Up/Down: Reorder custom presets
  *
  * @author DoubleGate
- * @version 1.8.3
+ * @version 1.9.0
  * @license MIT
  *
  * Changelog:
+ * - v1.9.0: Sync & Profiles - profile management, browser sync, import/export
  * - v1.8.3: Fixed visibility toggles, bubble styles, code block features using data attributes
  * - v1.8.2: Technical debt remediation, CSS custom properties, state consolidation
  * - v1.8.1: Fixed real-time enhanced styling updates
@@ -60,7 +61,8 @@
         MAX_CUSTOM_PRESETS,
         MAX_RECENT_WIDTHS,
         BUILT_IN_PRESETS,
-        TIMING
+        TIMING,
+        PROFILE_STORAGE_KEYS
     } = window.ClaudeWidthConstants;
 
     // =========================================================================
@@ -219,6 +221,24 @@
      */
     let recentlyUsedList;
 
+    /**
+     * Profile select dropdown (v1.9.0).
+     * @type {HTMLSelectElement}
+     */
+    let profileSelect;
+
+    /**
+     * Manage profiles button (v1.9.0).
+     * @type {HTMLButtonElement}
+     */
+    let manageProfilesBtn;
+
+    /**
+     * Sync indicator element (v1.9.0).
+     * @type {HTMLElement}
+     */
+    let syncIndicator;
+
     // =========================================================================
     // CONSOLIDATED STATE MANAGEMENT
     // =========================================================================
@@ -268,7 +288,13 @@
         dragTarget: null,
 
         // Enhanced styling state (v1.8.0)
-        enhancedSettings: { ...ENHANCED_DEFAULTS }
+        enhancedSettings: { ...ENHANCED_DEFAULTS },
+
+        // Profile state (v1.9.0)
+        activeProfileId: 'default',
+        activeProfileName: 'Default',
+        profiles: {},
+        syncEnabled: false
     };
 
     // =========================================================================
@@ -308,6 +334,11 @@
         recentlyUsedContainer = document.getElementById('recentlyUsedSection');
         recentlyUsedList = document.getElementById('recentlyUsedList');
 
+        // Profile elements (v1.9.0)
+        profileSelect = document.getElementById('profileSelect');
+        manageProfilesBtn = document.getElementById('manageProfilesBtn');
+        syncIndicator = document.getElementById('syncIndicator');
+
         // Set up event listeners
         setupEventListeners();
 
@@ -320,10 +351,14 @@
         loadCustomPresets();
         loadRecentWidths();
         loadEnhancedSettings();
+        loadProfiles();
         checkClaudeTabStatus();
 
         // Set up enhanced styling event listeners (v1.8.0)
         setupEnhancedStyleListeners();
+
+        // Set up profile event listeners (v1.9.0)
+        setupProfileListeners();
 
         // Set initial focus to slider after a brief delay
         setTimeout(() => {
@@ -2046,6 +2081,156 @@
         } catch (error) {
             console.error('[Claude Width Popup] Error resetting enhanced styles:', error);
         }
+    }
+
+    // =========================================================================
+    // PROFILES (v1.9.0)
+    // =========================================================================
+
+    /**
+     * Set up profile event listeners.
+     */
+    function setupProfileListeners() {
+        // Profile select change
+        if (profileSelect) {
+            profileSelect.addEventListener('change', handleProfileChange);
+        }
+
+        // Manage profiles button
+        if (manageProfilesBtn) {
+            manageProfilesBtn.addEventListener('click', handleManageProfilesClick);
+        }
+    }
+
+    /**
+     * Load profiles from storage.
+     */
+    async function loadProfiles() {
+        try {
+            const result = await browser.storage.local.get([
+                PROFILE_STORAGE_KEYS.SYNC_ENABLED,
+                PROFILE_STORAGE_KEYS.ACTIVE_PROFILE_ID,
+                PROFILE_STORAGE_KEYS.PROFILES
+            ]);
+
+            state.syncEnabled = result[PROFILE_STORAGE_KEYS.SYNC_ENABLED] || false;
+            state.activeProfileId = result[PROFILE_STORAGE_KEYS.ACTIVE_PROFILE_ID] || 'default';
+            state.profiles = result[PROFILE_STORAGE_KEYS.PROFILES] || {};
+
+            // Get active profile name
+            if (state.profiles[state.activeProfileId]) {
+                state.activeProfileName = state.profiles[state.activeProfileId].name || 'Default';
+            }
+
+            // Update UI
+            renderProfileSelect();
+            updateSyncIndicator();
+
+            console.log(`[Claude Width Popup] Profiles loaded: ${Object.keys(state.profiles).length} profiles, active: "${state.activeProfileName}"`);
+        } catch (error) {
+            console.error('[Claude Width Popup] Error loading profiles:', error);
+        }
+    }
+
+    /**
+     * Render the profile select dropdown.
+     */
+    function renderProfileSelect() {
+        if (!profileSelect) return;
+
+        // Clear existing options
+        profileSelect.textContent = '';
+
+        // Sort profiles by name, keeping default first
+        const sortedProfiles = Object.entries(state.profiles)
+            .sort(([idA, a], [idB, b]) => {
+                if (idA === 'default') return -1;
+                if (idB === 'default') return 1;
+                return a.name.localeCompare(b.name);
+            });
+
+        // Add options
+        for (const [id, profile] of sortedProfiles) {
+            const option = document.createElement('option');
+            option.value = id;
+            option.textContent = profile.name;
+            if (id === state.activeProfileId) {
+                option.selected = true;
+            }
+            profileSelect.appendChild(option);
+        }
+
+        // Update focusable elements
+        cacheFocusableElements();
+    }
+
+    /**
+     * Update sync indicator visibility and text.
+     */
+    function updateSyncIndicator() {
+        if (!syncIndicator) return;
+
+        if (state.syncEnabled) {
+            syncIndicator.hidden = false;
+            const syncText = syncIndicator.querySelector('.sync-text');
+            if (syncText) {
+                syncText.textContent = 'Synced';
+            }
+            syncIndicator.classList.add('active');
+        } else {
+            syncIndicator.hidden = true;
+            syncIndicator.classList.remove('active');
+        }
+    }
+
+    /**
+     * Handle profile select change.
+     *
+     * @param {Event} event - Change event
+     */
+    async function handleProfileChange(event) {
+        const newProfileId = event.target.value;
+
+        if (newProfileId === state.activeProfileId) {
+            return;
+        }
+
+        try {
+            // Switch profile via background script
+            const response = await browser.runtime.sendMessage({
+                action: 'switchProfile',
+                profileId: newProfileId
+            });
+
+            if (response && response.success) {
+                state.activeProfileId = newProfileId;
+                state.activeProfileName = state.profiles[newProfileId]?.name || 'Unknown';
+
+                // Reload settings from the new profile
+                await loadSavedPreference();
+                await loadEnhancedSettings();
+                await loadCustomPresets();
+
+                announceChange(`Switched to "${state.activeProfileName}" profile`);
+                console.log(`[Claude Width Popup] Switched to profile: ${state.activeProfileName}`);
+            } else {
+                // Revert select to previous value
+                profileSelect.value = state.activeProfileId;
+                announceChange(response?.error || 'Failed to switch profile');
+            }
+        } catch (error) {
+            console.error('[Claude Width Popup] Error switching profile:', error);
+            profileSelect.value = state.activeProfileId;
+            announceChange('Error switching profile');
+        }
+    }
+
+    /**
+     * Handle manage profiles button click.
+     */
+    function handleManageProfilesClick() {
+        // Open options page
+        browser.runtime.openOptionsPage();
     }
 
     // =========================================================================
