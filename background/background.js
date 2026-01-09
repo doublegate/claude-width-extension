@@ -2,7 +2,7 @@
  * Claude Chat Width Customizer - Background Script
  * =================================================
  *
- * VERSION 1.8.2 - Technical Debt Remediation
+ * VERSION 1.8.3 - Advanced Styling Fix (Data Attributes)
  *
  * Handles keyboard shortcuts (browser.commands API), badge updates,
  * context menu management, and communication between popup and content scripts.
@@ -23,7 +23,7 @@
  * - Added support for typography, display modes, code blocks, and visual tweaks
  *
  * @author DoubleGate
- * @version 1.8.2
+ * @version 1.8.3
  * @license MIT
  */
 
@@ -138,7 +138,7 @@
      * Initialize the background script.
      */
     async function initialize() {
-        console.log('[Claude Width Background] Initializing v1.8.2...');
+        console.log('[Claude Width Background] Initializing v1.8.3...');
 
         // Run migrations for existing users
         await runMigrations();

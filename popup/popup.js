@@ -27,10 +27,11 @@
  * - Alt+Up/Down: Reorder custom presets
  *
  * @author DoubleGate
- * @version 1.8.2
+ * @version 1.8.3
  * @license MIT
  *
  * Changelog:
+ * - v1.8.3: Fixed visibility toggles, bubble styles, code block features using data attributes
  * - v1.8.2: Technical debt remediation, CSS custom properties, state consolidation
  * - v1.8.1: Fixed real-time enhanced styling updates
  * - v1.8.0: Enhanced styling - typography, display modes, code blocks, visual tweaks, default 85%

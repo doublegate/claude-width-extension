@@ -1,6 +1,6 @@
 {
   "name": "claude-width-extension",
-  "version": "1.8.2",
+  "version": "1.8.3",
   "description": "Firefox extension to customize chat width on claude.ai",
   "private": true,
   "type": "module",

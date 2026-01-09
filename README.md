@@ -47,7 +47,7 @@ A Firefox extension that allows you to customize the width of the text input/out
 cd claude-width-extension
 
 # Create the XPI file (ZIP with .xpi extension)
-zip -r build/claude-width-customizer-v1.8.2.xpi . -x "*.git*" -x "build/*" -x "*.DS_Store" -x "CLAUDE.md" -x ".claude/*" -x "docs/*" -x "images/*" -x "tests/*" -x "node_modules/*" -x "coverage/*" -x "*.config.js"
+zip -r build/claude-width-customizer-v1.8.3.xpi . -x "*.git*" -x "build/*" -x "*.DS_Store" -x "CLAUDE.md" -x ".claude/*" -x "docs/*" -x "images/*" -x "tests/*" -x "node_modules/*" -x "coverage/*" -x "*.config.js"
 ```
 
 ## Usage
@@ -210,6 +210,18 @@ MIT License - feel free to modify and distribute.
 DoubleGate - [GitHub](https://github.com/doublegate)
 
 ## Changelog
+
+### v1.8.3 (Advanced Styling Fix)
+- **Fixed**: Word Wrap toggle now correctly applies/removes word wrapping from code blocks
+- **Fixed**: Expand/Collapse All button properly collapses code blocks with gradient overlay
+- **Fixed**: Individual expand buttons on collapsed code blocks now function correctly
+- **Fixed**: Timestamps toggle now properly shows/hides message timestamps
+- **Fixed**: Avatars toggle now properly shows/hides user and Claude avatars
+- **Fixed**: Bubble Style options (Rounded/Square/Minimal) now apply correctly
+- **Technical**: Replaced CSS custom properties with data attributes for visibility toggles
+- **Technical**: Added DATA_ATTRS pattern (`data-claude-hide-*`, `data-claude-bubble-style`, `data-claude-code-collapsed`)
+- **Technical**: When showing elements, data attribute is removed so original styles naturally apply
+- **Technical**: When hiding elements, data attribute is set and CSS applies `display: none`
 
 ### v1.8.2 (Technical Debt Remediation)
 - **Performance**: Replaced inline style manipulation with CSS custom properties for O(1) updates

@@ -2,30 +2,28 @@
  * Claude Chat Width Customizer - Content Script
  * ==============================================
  *
- * VERSION 1.8.2 - Technical Debt Remediation
+ * VERSION 1.8.3 - Fixed Visual Tweaks and Code Block Features
  *
  * Injected into claude.ai pages to apply width customizations to the chat area.
  * Works with the background script to handle keyboard shortcuts for preset
  * cycling and default toggling.
  *
+ * Changes from 1.8.2:
+ * - FIXED: Avatar/Timestamp visibility using data attributes instead of display:block/inline
+ * - FIXED: Bubble styles using data attributes so 'rounded' doesn't override Claude's styles
+ * - FIXED: Code block word wrap with more specific CSS selectors
+ * - FIXED: Code block collapse/expand using global data attribute + per-block buttons
+ * - NEW: DATA_ATTRS object for visibility and style toggle attributes
+ * - NEW: CSS for individually expanded code blocks that override global collapse
+ * - IMPROVED: Expand buttons styled in CSS instead of inline styles
+ *
  * Changes from 1.8.1:
  * - REFACTORED: Replaced inline style manipulation with CSS custom properties
  * - NEW: CSS variables (--claude-width-*) defined on :root for dynamic updates
- * - NEW: updateCSSVariables() updates all styling with single :root manipulation
- * - NEW: clearCSSVariables() clears all CSS custom properties efficiently
  * - PERFORMANCE: Eliminated O(n) DOM queries - now O(1) root element updates
- * - DEPRECATED: applyEnhancedInlineStyles() now redirects to updateCSSVariables()
- * - CLEANUP: Removed unused enhancedDebounceTimer variable (dead code)
- * - DOCS: Added comprehensive documentation for CSS selector arrays
- * - DOCS: Added helper functions to reduce code duplication
- *
- * Changes from 1.8.0:
- * - Fixed real-time enhanced styling updates
- * - Added comprehensive DOM selectors for claude.ai's Tailwind CSS structure
- * - Enhanced MutationObserver to detect enhanced-styling-relevant elements
  *
  * @author DoubleGate
- * @version 1.8.2
+ * @version 1.8.3
  * @license MIT
  */
 
@@ -79,13 +77,21 @@
         CODE_MAX_HEIGHT: '--claude-width-code-max-height',
         CODE_OVERFLOW: '--claude-width-code-overflow',
         CODE_WHITESPACE: '--claude-width-code-whitespace',
-        CODE_WORDWRAP: '--claude-width-code-wordwrap',
-        AVATAR_DISPLAY: '--claude-width-avatar-display',
-        TIMESTAMP_DISPLAY: '--claude-width-timestamp-display',
-        BUBBLE_RADIUS: '--claude-width-bubble-radius',
-        BUBBLE_BG: '--claude-width-bubble-bg',
-        BUBBLE_BORDER: '--claude-width-bubble-border',
-        BUBBLE_SHADOW: '--claude-width-bubble-shadow'
+        CODE_WORDWRAP: '--claude-width-code-wordwrap'
+        // Note: Avatar/Timestamp visibility and Bubble style now use data attributes
+        // instead of CSS variables for proper show/hide behavior (v1.8.3)
+    };
+
+    /**
+     * Data attribute names for visibility and style toggles.
+     * Using data attributes allows toggling styles on/off without needing to know
+     * the original display values - when attribute is absent, original styles apply.
+     */
+    const DATA_ATTRS = {
+        HIDE_AVATARS: 'data-claude-hide-avatars',
+        HIDE_TIMESTAMPS: 'data-claude-hide-timestamps',
+        BUBBLE_STYLE: 'data-claude-bubble-style',
+        CODE_COLLAPSED: 'data-claude-code-collapsed'
     };
 
     /**
@@ -558,13 +564,13 @@
     ];
 
     /**
-     * Generate CSS for enhanced styling features using CSS custom properties.
+     * Generate CSS for enhanced styling features using CSS custom properties and data attributes.
      * Uses broad selectors with high specificity to override Claude's styles.
      *
-     * CSS Custom Properties Approach (v1.8.2):
-     * - CSS rules reference var(--claude-width-*) variables
-     * - JavaScript updates variables on :root, not individual elements
-     * - Benefits: reduced DOM manipulation, centralized styling, better performance
+     * CSS Custom Properties Approach (v1.8.3):
+     * - Typography uses CSS variables for dynamic updates
+     * - Visibility toggles use data attributes for proper show/hide behavior
+     * - Bubble styles use data attributes so "rounded" doesn't override Claude's styles
      *
      * @returns {string} CSS string
      */
@@ -576,10 +582,10 @@
         const timestampSelectors = TIMESTAMP_SELECTORS.join(',\n            ');
         const codeSelectors = CODE_BLOCK_SELECTORS.join(',\n            ');
 
-        // CSS uses var() references - actual values are set via updateCSSVariables()
+        // CSS uses var() references for typography and data attributes for visibility/styles
         const css = `
-            /* Claude Width Customizer - Enhanced Styling v1.8.2 */
-            /* Uses CSS custom properties for efficient dynamic updates */
+            /* Claude Width Customizer - Enhanced Styling v1.8.3 */
+            /* Uses CSS custom properties for typography, data attributes for visibility/styles */
             /* These styles use !important to override Claude's React-generated styles */
 
             /* ========================================
@@ -597,16 +603,6 @@
                 ${CSS_VARS.CODE_OVERFLOW}: auto;
                 ${CSS_VARS.CODE_WHITESPACE}: pre;
                 ${CSS_VARS.CODE_WORDWRAP}: normal;
-
-                /* Visibility */
-                ${CSS_VARS.AVATAR_DISPLAY}: block;
-                ${CSS_VARS.TIMESTAMP_DISPLAY}: inline;
-
-                /* Bubble style */
-                ${CSS_VARS.BUBBLE_RADIUS}: inherit;
-                ${CSS_VARS.BUBBLE_BG}: inherit;
-                ${CSS_VARS.BUBBLE_BORDER}: inherit;
-                ${CSS_VARS.BUBBLE_SHADOW}: inherit;
             }
 
             /* ========================================
@@ -629,16 +625,30 @@
             }
 
             /* ========================================
-               MESSAGE PADDING
+               MESSAGE PADDING (always applies)
                ======================================== */
 
             /* Apply padding to message containers */
             ${containerSelectors} {
                 padding: var(${CSS_VARS.MESSAGE_PADDING}) !important;
-                border-radius: var(${CSS_VARS.BUBBLE_RADIUS}) !important;
-                background: var(${CSS_VARS.BUBBLE_BG}) !important;
-                border: var(${CSS_VARS.BUBBLE_BORDER}) !important;
-                box-shadow: var(${CSS_VARS.BUBBLE_SHADOW}) !important;
+            }
+
+            /* ========================================
+               BUBBLE STYLE (data attribute based)
+               Only override Claude's styles for square/minimal
+               ======================================== */
+
+            /* Square bubble style - remove border-radius */
+            html[${DATA_ATTRS.BUBBLE_STYLE}="square"] ${containerSelectors} {
+                border-radius: 0 !important;
+            }
+
+            /* Minimal bubble style - transparent, no borders, no shadows */
+            html[${DATA_ATTRS.BUBBLE_STYLE}="minimal"] ${containerSelectors} {
+                border-radius: 0 !important;
+                background: transparent !important;
+                border: none !important;
+                box-shadow: none !important;
             }
 
             /* ========================================
@@ -651,32 +661,114 @@
                 overflow-y: var(${CSS_VARS.CODE_OVERFLOW}) !important;
             }
 
-            /* Code block word wrap */
+            /* Code block word wrap - use more specific selectors */
             pre,
-            pre code,
-            [class*="CodeBlock"] code,
-            [class*="code-block"] code {
+            pre > code,
+            [class*="CodeBlock"],
+            [class*="CodeBlock"] > code,
+            [class*="CodeBlock"] pre,
+            [class*="CodeBlock"] pre > code,
+            [class*="code-block"],
+            [class*="code-block"] > code,
+            [class*="code-block"] pre,
+            [class*="code-block"] pre > code,
+            code[class*="language-"],
+            pre[class*="language-"] {
                 white-space: var(${CSS_VARS.CODE_WHITESPACE}) !important;
                 word-wrap: var(${CSS_VARS.CODE_WORDWRAP}) !important;
                 overflow-wrap: var(${CSS_VARS.CODE_WORDWRAP}) !important;
+                word-break: normal !important;
             }
 
             /* ========================================
-               TIMESTAMP VISIBILITY
+               CODE BLOCK COLLAPSE (data attribute based)
                ======================================== */
 
-            /* Timestamps - controlled via CSS variable */
-            ${timestampSelectors} {
-                display: var(${CSS_VARS.TIMESTAMP_DISPLAY}) !important;
+            /* When code-collapsed is active, limit height and hide overflow */
+            html[${DATA_ATTRS.CODE_COLLAPSED}="true"] pre,
+            html[${DATA_ATTRS.CODE_COLLAPSED}="true"] [class*="CodeBlock"],
+            html[${DATA_ATTRS.CODE_COLLAPSED}="true"] [class*="code-block"] {
+                max-height: 100px !important;
+                overflow: hidden !important;
+                position: relative !important;
+            }
+
+            /* Collapse indicator gradient overlay */
+            html[${DATA_ATTRS.CODE_COLLAPSED}="true"] pre::after,
+            html[${DATA_ATTRS.CODE_COLLAPSED}="true"] [class*="CodeBlock"]::after {
+                content: '';
+                position: absolute;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                height: 40px;
+                background: linear-gradient(transparent, rgba(0, 0, 0, 0.3));
+                pointer-events: none;
+            }
+
+            /* Individually expanded code blocks override global collapse */
+            html[${DATA_ATTRS.CODE_COLLAPSED}="true"] pre[data-claude-individually-expanded="true"],
+            html[${DATA_ATTRS.CODE_COLLAPSED}="true"] [class*="CodeBlock"][data-claude-individually-expanded="true"],
+            html[${DATA_ATTRS.CODE_COLLAPSED}="true"] [class*="code-block"][data-claude-individually-expanded="true"] {
+                max-height: none !important;
+                overflow: visible !important;
+            }
+
+            /* Hide gradient overlay on individually expanded blocks */
+            html[${DATA_ATTRS.CODE_COLLAPSED}="true"] pre[data-claude-individually-expanded="true"]::after,
+            html[${DATA_ATTRS.CODE_COLLAPSED}="true"] [class*="CodeBlock"][data-claude-individually-expanded="true"]::after {
+                display: none !important;
             }
 
             /* ========================================
-               AVATAR VISIBILITY
+               TIMESTAMP VISIBILITY (data attribute based)
+               Only hide when attribute is present
                ======================================== */
 
-            /* Avatars - controlled via CSS variable */
-            ${avatarSelectors} {
-                display: var(${CSS_VARS.AVATAR_DISPLAY}) !important;
+            /* Hide timestamps when data attribute is set */
+            html[${DATA_ATTRS.HIDE_TIMESTAMPS}="true"] ${timestampSelectors} {
+                display: none !important;
+                visibility: hidden !important;
+            }
+
+            /* ========================================
+               AVATAR VISIBILITY (data attribute based)
+               Only hide when attribute is present
+               ======================================== */
+
+            /* Hide avatars when data attribute is set */
+            html[${DATA_ATTRS.HIDE_AVATARS}="true"] ${avatarSelectors} {
+                display: none !important;
+                visibility: hidden !important;
+            }
+
+            /* ========================================
+               EXPAND/COLLAPSE BUTTON STYLING
+               ======================================== */
+
+            .claude-expand-btn {
+                position: absolute !important;
+                bottom: 8px !important;
+                right: 8px !important;
+                padding: 4px 12px !important;
+                background: rgba(0, 0, 0, 0.7) !important;
+                color: white !important;
+                border: none !important;
+                border-radius: 4px !important;
+                cursor: pointer !important;
+                font-size: 12px !important;
+                font-weight: 500 !important;
+                z-index: 100 !important;
+                transition: background 0.2s ease !important;
+            }
+
+            .claude-expand-btn:hover {
+                background: rgba(0, 0, 0, 0.85) !important;
+            }
+
+            .claude-expand-btn:focus {
+                outline: 2px solid #fff !important;
+                outline-offset: 2px !important;
             }
 
             /* ========================================
@@ -706,14 +798,17 @@
     }
 
     /**
-     * Update CSS custom properties on :root based on current settings.
-     * This is more efficient than manipulating inline styles on individual elements.
+     * Update CSS custom properties and data attributes on :root based on current settings.
+     * - Typography uses CSS variables for dynamic updates
+     * - Visibility and bubble styles use data attributes for proper on/off behavior
      */
     function updateCSSVariables() {
         const settings = enhancedSettings;
         const root = document.documentElement;
 
-        // Typography
+        // =====================================================================
+        // TYPOGRAPHY (CSS Variables)
+        // =====================================================================
         const fontSizePercent = settings.fontSizePercent || ENHANCED_DEFAULTS.fontSizePercent;
         const lineHeightValue = LINE_HEIGHT_VALUES[settings.lineHeight] || LINE_HEIGHT_VALUES.normal;
         const messagePaddingValue = MESSAGE_PADDING_VALUES[settings.messagePadding] || MESSAGE_PADDING_VALUES.medium;
@@ -722,7 +817,9 @@
         root.style.setProperty(CSS_VARS.LINE_HEIGHT, String(lineHeightValue));
         root.style.setProperty(CSS_VARS.MESSAGE_PADDING, `${messagePaddingValue}px`);
 
-        // Code blocks
+        // =====================================================================
+        // CODE BLOCKS (CSS Variables)
+        // =====================================================================
         const codeBlockHeight = settings.codeBlockMaxHeight;
         const codeBlockWrap = settings.codeBlockWordWrap;
 
@@ -742,52 +839,83 @@
             root.style.setProperty(CSS_VARS.CODE_WORDWRAP, 'normal');
         }
 
-        // Visibility
+        // =====================================================================
+        // VISIBILITY TOGGLES (Data Attributes)
+        // Only set attribute when hiding; remove when showing (preserves original display)
+        // =====================================================================
         const showAvatars = settings.showAvatars;
         const showTimestamps = settings.showTimestamps;
 
-        root.style.setProperty(CSS_VARS.AVATAR_DISPLAY, showAvatars ? 'block' : 'none');
-        root.style.setProperty(CSS_VARS.TIMESTAMP_DISPLAY, showTimestamps ? 'inline' : 'none');
+        if (showAvatars === false) {
+            root.setAttribute(DATA_ATTRS.HIDE_AVATARS, 'true');
+        } else {
+            root.removeAttribute(DATA_ATTRS.HIDE_AVATARS);
+        }
 
-        // Bubble style
+        if (showTimestamps === false) {
+            root.setAttribute(DATA_ATTRS.HIDE_TIMESTAMPS, 'true');
+        } else {
+            root.removeAttribute(DATA_ATTRS.HIDE_TIMESTAMPS);
+        }
+
+        // =====================================================================
+        // BUBBLE STYLE (Data Attribute)
+        // Only set attribute for non-default styles; remove for 'rounded' (default)
+        // =====================================================================
         const bubbleStyle = settings.messageBubbleStyle;
 
-        if (bubbleStyle === 'square') {
-            root.style.setProperty(CSS_VARS.BUBBLE_RADIUS, '0');
-            root.style.setProperty(CSS_VARS.BUBBLE_BG, 'inherit');
-            root.style.setProperty(CSS_VARS.BUBBLE_BORDER, 'inherit');
-            root.style.setProperty(CSS_VARS.BUBBLE_SHADOW, 'inherit');
-        } else if (bubbleStyle === 'minimal') {
-            root.style.setProperty(CSS_VARS.BUBBLE_RADIUS, '0');
-            root.style.setProperty(CSS_VARS.BUBBLE_BG, 'transparent');
-            root.style.setProperty(CSS_VARS.BUBBLE_BORDER, 'none');
-            root.style.setProperty(CSS_VARS.BUBBLE_SHADOW, 'none');
+        if (bubbleStyle === 'square' || bubbleStyle === 'minimal') {
+            root.setAttribute(DATA_ATTRS.BUBBLE_STYLE, bubbleStyle);
         } else {
-            // Default 'rounded' style - inherit from Claude's styles
-            root.style.setProperty(CSS_VARS.BUBBLE_RADIUS, 'inherit');
-            root.style.setProperty(CSS_VARS.BUBBLE_BG, 'inherit');
-            root.style.setProperty(CSS_VARS.BUBBLE_BORDER, 'inherit');
-            root.style.setProperty(CSS_VARS.BUBBLE_SHADOW, 'inherit');
+            // 'rounded' or undefined - remove attribute to let Claude's default styles apply
+            root.removeAttribute(DATA_ATTRS.BUBBLE_STYLE);
+        }
+
+        // =====================================================================
+        // CODE BLOCKS COLLAPSED (Data Attribute)
+        // =====================================================================
+        const codeBlocksCollapsed = settings.codeBlocksCollapsed;
+
+        if (codeBlocksCollapsed === true) {
+            root.setAttribute(DATA_ATTRS.CODE_COLLAPSED, 'true');
+        } else {
+            root.removeAttribute(DATA_ATTRS.CODE_COLLAPSED);
         }
 
         // Mark document as having enhanced styles active
         root.setAttribute('data-claude-enhanced-active', 'true');
 
-        console.log('[Claude Width] CSS variables updated');
+        console.log('[Claude Width] CSS variables and data attributes updated:', {
+            fontSizePercent,
+            lineHeightValue,
+            messagePaddingValue,
+            codeBlockHeight,
+            codeBlockWrap,
+            showAvatars,
+            showTimestamps,
+            bubbleStyle,
+            codeBlocksCollapsed
+        });
     }
 
     /**
-     * Clear CSS custom properties from :root.
+     * Clear CSS custom properties and data attributes from :root.
      */
     function clearCSSVariables() {
         const root = document.documentElement;
 
+        // Remove CSS custom properties
         Object.values(CSS_VARS).forEach(varName => {
             root.style.removeProperty(varName);
         });
 
+        // Remove data attributes
+        Object.values(DATA_ATTRS).forEach(attrName => {
+            root.removeAttribute(attrName);
+        });
+
         root.removeAttribute('data-claude-enhanced-active');
-        console.log('[Claude Width] CSS variables cleared');
+        console.log('[Claude Width] CSS variables and data attributes cleared');
     }
 
     /**
@@ -944,74 +1072,98 @@
 
     /**
      * Toggle collapse state of all code blocks.
-     * Uses cached CODE_BLOCK_SELECTOR and processNonSidebarElements for optimization.
+     * Uses data attribute on html for global collapse state (CSS handles styling).
+     * Individual expand buttons allow per-block expansion.
      *
-     * @param {boolean} collapse - Whether to collapse
+     * @param {boolean} collapse - Whether to collapse all code blocks
      */
     function toggleAllCodeBlocks(collapse) {
+        const root = document.documentElement;
+
+        // Update global state via data attribute
+        enhancedSettings.codeBlocksCollapsed = collapse;
+
+        if (collapse) {
+            root.setAttribute(DATA_ATTRS.CODE_COLLAPSED, 'true');
+        } else {
+            root.removeAttribute(DATA_ATTRS.CODE_COLLAPSED);
+        }
+
+        // Add or remove expand buttons on all code blocks
         processNonSidebarElements(CODE_BLOCK_SELECTOR, block => {
             if (collapse) {
-                block.style.maxHeight = '100px';
-                block.style.overflow = 'hidden';
-                block.setAttribute('data-claude-collapsed', 'true');
+                // Clear any individual expansion state
+                block.removeAttribute('data-claude-individually-expanded');
+                block.style.maxHeight = '';
+                block.style.overflow = '';
+                block.style.position = '';
 
                 // Add expand button if not exists
                 if (!block.querySelector('.claude-expand-btn')) {
                     addExpandButton(block);
+                } else {
+                    // Update existing button text
+                    const btn = block.querySelector('.claude-expand-btn');
+                    btn.textContent = 'Expand';
                 }
             } else {
+                // Clear individual expansion state
+                block.removeAttribute('data-claude-individually-expanded');
                 block.style.maxHeight = '';
                 block.style.overflow = '';
-                block.removeAttribute('data-claude-collapsed');
+                block.style.position = '';
 
-                // Remove expand button
+                // Remove expand buttons
                 const btn = block.querySelector('.claude-expand-btn');
                 if (btn) btn.remove();
             }
         });
+
+        console.log(`[Claude Width] All code blocks ${collapse ? 'collapsed' : 'expanded'}`);
     }
 
     /**
      * Add expand/collapse button to a code block.
+     * Button allows individual expansion when global collapse is active.
+     *
      * @param {Element} block - The code block element
      */
     function addExpandButton(block) {
+        // Skip if button already exists
+        if (block.querySelector('.claude-expand-btn')) return;
+
         const btn = document.createElement('button');
         btn.className = 'claude-expand-btn';
         btn.textContent = 'Expand';
-        btn.style.cssText = `
-            position: absolute;
-            bottom: 4px;
-            right: 4px;
-            padding: 4px 8px;
-            background: rgba(0, 0, 0, 0.6);
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 11px;
-            z-index: 10;
-        `;
+        btn.type = 'button';
+        btn.setAttribute('aria-label', 'Expand code block');
 
         btn.addEventListener('click', (e) => {
             e.stopPropagation();
-            const isCollapsed = block.getAttribute('data-claude-collapsed') === 'true';
+            e.preventDefault();
 
-            if (isCollapsed) {
+            const isExpanded = block.hasAttribute('data-claude-individually-expanded');
+
+            if (isExpanded) {
+                // Collapse this block (return to global collapsed state)
+                block.removeAttribute('data-claude-individually-expanded');
                 block.style.maxHeight = '';
                 block.style.overflow = '';
-                block.removeAttribute('data-claude-collapsed');
-                btn.textContent = 'Collapse';
-            } else {
-                block.style.maxHeight = '100px';
-                block.style.overflow = 'hidden';
-                block.setAttribute('data-claude-collapsed', 'true');
                 btn.textContent = 'Expand';
+                btn.setAttribute('aria-label', 'Expand code block');
+            } else {
+                // Expand this block (override global collapse)
+                block.setAttribute('data-claude-individually-expanded', 'true');
+                block.style.maxHeight = 'none';
+                block.style.overflow = 'visible';
+                btn.textContent = 'Collapse';
+                btn.setAttribute('aria-label', 'Collapse code block');
             }
         });
 
         // Ensure code block is positioned for absolute child
-        if (getComputedStyle(block).position === 'static') {
+        const position = getComputedStyle(block).position;
+        if (position === 'static') {
             block.style.position = 'relative';
         }
 

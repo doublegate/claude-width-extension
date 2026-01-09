@@ -4,13 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Firefox extension (Manifest V2) that customizes the chat width on claude.ai. Allows users to adjust the main chat area from 40-100% width via a popup UI, without affecting the sidebar. Version 1.8.2 adds comprehensive technical debt remediation: CSS custom properties for O(1) styling updates, consolidated state management in popup.js, comprehensive test suite (206 tests), and extensive documentation. Includes enhanced styling for typography controls (font size, line height, padding), display modes (compact, comfortable, spacious, custom), code block enhancements (max-height, word wrap, collapse all), and visual tweaks (timestamps, avatars, bubble styles).
+Firefox extension (Manifest V2) that customizes the chat width on claude.ai. Allows users to adjust the main chat area from 40-100% width via a popup UI, without affecting the sidebar. Version 1.8.3 fixes non-functional visual tweaks and code block features by using data attributes instead of CSS variables for proper show/hide behavior. Includes enhanced styling for typography controls (font size, line height, padding), display modes (compact, comfortable, spacious, custom), code block enhancements (max-height, word wrap, collapse all), and visual tweaks (timestamps, avatars, bubble styles).
 
 ## Build & Development
 
 ```bash
 # Build XPI package (from project root)
-zip -r build/claude-width-customizer-v1.8.2.xpi . -x "*.git*" -x "build/*" -x "*.DS_Store" -x "CLAUDE.md" -x ".claude/*" -x "docs/*" -x "images/*" -x "tests/*" -x "node_modules/*" -x "coverage/*" -x "*.config.js"
+zip -r build/claude-width-customizer-v1.8.3.xpi . -x "*.git*" -x "build/*" -x "*.DS_Store" -x "CLAUDE.md" -x ".claude/*" -x "docs/*" -x "images/*" -x "tests/*" -x "node_modules/*" -x "coverage/*" -x "*.config.js"
 
 # Development testing (no build step required)
 # 1. Open Firefox → about:debugging → This Firefox
@@ -73,6 +73,28 @@ The extension must NOT affect sidebar elements. `isInsideSidebar()` walks up the
 - Uses `data-claude-width-applied` attribute to track styled elements
 - Inline styles for maximum specificity over React-generated styles
 - CSS file provides only transitions for smooth width changes
+
+### Data Attributes Pattern (v1.8.3)
+
+The visibility toggles (Timestamps, Avatars, Bubble Style) and code block collapse use data attributes on the `<html>` element instead of CSS custom properties. This approach was necessary because CSS variables with `display: block` or `display: inherit` broke elements that originally used `flex`, `inline-block`, or other display values.
+
+**Pattern**: When hiding elements, set a data attribute so CSS applies `display: none`. When showing elements, remove the attribute so no override exists and original styles naturally apply.
+
+```javascript
+// DATA_ATTRS object in content.js (lines 92-97)
+const DATA_ATTRS = {
+    hideTimestamps: 'data-claude-hide-timestamps',
+    hideAvatars: 'data-claude-hide-avatars',
+    bubbleStyle: 'data-claude-bubble-style',
+    codeCollapsed: 'data-claude-code-collapsed'
+};
+```
+
+**CSS Attribute Selectors** (in generateEnhancedCSS):
+- `html[data-claude-hide-timestamps] [selector] { display: none !important; }`
+- `html[data-claude-hide-avatars] [selector] { display: none !important; }`
+- `html[data-claude-bubble-style="square"] [selector] { border-radius: 0 !important; }`
+- `html[data-claude-code-collapsed] pre { max-height: 100px; overflow: hidden; }`
 
 ## Key Constants
 
@@ -221,7 +243,7 @@ The Advanced Styling section provides fine-grained control over Claude's chat ap
 
 ```
 claude-width-extension/
-├── manifest.json              # Extension manifest (Manifest V2, v1.8.2)
+├── manifest.json              # Extension manifest (Manifest V2, v1.8.3)
 ├── README.md                  # User documentation
 ├── CONTRIBUTING.md            # Contribution guidelines
 ├── LICENSE                    # MIT license
@@ -277,6 +299,7 @@ When Claude updates their UI, selectors may break. Debug process:
 
 | Version | Date | Highlights |
 |---------|------|------------|
+| v1.8.3 | 2026-01-08 | Fixed visibility toggles, bubble styles, code block features using data attributes |
 | v1.8.2 | 2026-01-08 | Technical debt remediation, CSS custom properties, test suite (206 tests) |
 | v1.8.1 | 2026-01-08 | Fixed real-time enhanced styling updates, comprehensive DOM selectors |
 | v1.8.0 | 2026-01-08 | Enhanced styling (typography, display modes, code blocks, visual tweaks), default 85%, grey badge |
