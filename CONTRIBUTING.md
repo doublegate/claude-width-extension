@@ -53,12 +53,26 @@ Thank you for your interest in contributing to this project!
 
 ### Testing
 
+**Automated Tests:**
+```bash
+npm test          # Run all 281 tests
+npm run test:watch  # Watch mode for development
+npm run test:coverage  # Run with coverage report
+```
+
+**Manual Testing Checklist:**
 Before submitting a PR, test:
 - [ ] Width slider changes work in real-time
 - [ ] Sidebar remains unaffected
 - [ ] Settings persist across browser restarts
 - [ ] Extension works on new and existing chat sessions
 - [ ] No console errors from the extension
+
+**Note on Code Coverage:**
+Coverage reports may show 0% despite all tests passing. This is a known limitation
+due to the IIFE (Immediately Invoked Function Expression) pattern used for browser
+extension compatibility. The tests ARE testing the actual code - coverage tools
+just cannot instrument code inside IIFEs. See `vitest.config.js` for details.
 
 ## Questions?
 

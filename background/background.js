@@ -2,7 +2,7 @@
  * Claude Chat Width Customizer - Background Script
  * =================================================
  *
- * VERSION 1.9.0 - Sync & Profiles
+ * VERSION 1.9.1 - Technical Debt Remediation
  *
  * Handles keyboard shortcuts (browser.commands API), badge updates,
  * context menu management, and communication between popup and content scripts.
@@ -26,7 +26,7 @@
  * - Added message handlers for profile operations
  *
  * @author DoubleGate
- * @version 1.9.0
+ * @version 1.9.1
  * @license MIT
  */
 
@@ -155,7 +155,8 @@
      * Initialize the background script.
      */
     async function initialize() {
-        console.log('[Claude Width Background] Initializing v1.9.0...');
+        const Logger = window.ClaudeWidthLogger;
+        Logger.info('Background', 'Initializing v1.9.1...');
 
         // Run migrations for existing users
         await runMigrations();
@@ -176,7 +177,7 @@
         // Update badge for current tab
         updateBadgeForActiveTab();
 
-        console.log('[Claude Width Background] Initialized successfully');
+        Logger.info('Background', 'Initialized successfully');
     }
 
     // =========================================================================
@@ -187,12 +188,13 @@
      * Run migrations for existing users upgrading from previous versions.
      */
     async function runMigrations() {
+        const Logger = window.ClaudeWidthLogger;
         try {
             const result = await browser.storage.local.get([MIGRATION_VERSION_KEY, STORAGE_KEY]);
             const currentMigrationVersion = result[MIGRATION_VERSION_KEY] || 0;
 
             if (currentMigrationVersion < CURRENT_MIGRATION_VERSION) {
-                console.log(`[Claude Width Background] Running migrations from v${currentMigrationVersion} to v${CURRENT_MIGRATION_VERSION}`);
+                Logger.info('Background', `Running migrations from v${currentMigrationVersion} to v${CURRENT_MIGRATION_VERSION}`);
 
                 // Migration 1: Initialize new storage keys, preserve existing width
                 if (currentMigrationVersion < 1) {
@@ -208,17 +210,17 @@
                     // Preserve existing width if valid, otherwise use new default
                     if (typeof existingWidth === 'number' && existingWidth >= MIN_WIDTH && existingWidth <= MAX_WIDTH) {
                         // Keep user's existing width - don't override it
-                        console.log(`[Claude Width Background] Preserving existing width: ${existingWidth}%`);
+                        Logger.debug('Background', `Preserving existing width: ${existingWidth}%`);
                         // Add existing width to recent widths
                         newData[RECENT_WIDTHS_KEY] = [existingWidth];
                     } else {
                         // New user or invalid value - set new default
                         newData[STORAGE_KEY] = DEFAULT_WIDTH;
-                        console.log(`[Claude Width Background] Setting new default width: ${DEFAULT_WIDTH}%`);
+                        Logger.debug('Background', `Setting new default width: ${DEFAULT_WIDTH}%`);
                     }
 
                     await browser.storage.local.set(newData);
-                    console.log('[Claude Width Background] Migration 1 complete');
+                    Logger.debug('Background', 'Migration 1 complete');
                 }
 
                 // Migration 2: Add enhanced styling features (v1.8.0)
@@ -229,7 +231,7 @@
                     };
 
                     await browser.storage.local.set(enhancedData);
-                    console.log('[Claude Width Background] Migration 2 complete - Enhanced styling features initialized');
+                    Logger.debug('Background', 'Migration 2 complete - Enhanced styling features initialized');
                 }
 
                 // Migration 3: Create profiles from existing settings (v1.9.0)
@@ -269,15 +271,15 @@
                     };
 
                     await browser.storage.local.set(profilesData);
-                    console.log('[Claude Width Background] Migration 3 complete - Profile system initialized');
+                    Logger.debug('Background', 'Migration 3 complete - Profile system initialized');
                 }
 
                 // Update migration version to current
                 await browser.storage.local.set({ [MIGRATION_VERSION_KEY]: CURRENT_MIGRATION_VERSION });
-                console.log(`[Claude Width Background] Migration version updated to ${CURRENT_MIGRATION_VERSION}`);
+                Logger.info('Background', `Migration version updated to ${CURRENT_MIGRATION_VERSION}`);
             }
         } catch (error) {
-            console.error('[Claude Width Background] Migration error:', error);
+            Logger.error('Background', 'Migration error:', error);
         }
     }
 
@@ -285,6 +287,7 @@
      * Load current state from storage.
      */
     async function loadState() {
+        const Logger = window.ClaudeWidthLogger;
         try {
             const result = await browser.storage.local.get([
                 STORAGE_KEY,
@@ -325,9 +328,9 @@
                 activeProfileName = profiles[activeProfileId].name || 'Default';
             }
 
-            console.log(`[Claude Width Background] State loaded: width=${currentWidth}%, profile="${activeProfileName}", customPresets=${customPresets.length}, recentWidths=${recentWidths.length}`);
+            Logger.debug('Background', `State loaded: width=${currentWidth}%, profile="${activeProfileName}", customPresets=${customPresets.length}, recentWidths=${recentWidths.length}`);
         } catch (error) {
-            console.error('[Claude Width Background] Error loading state:', error);
+            Logger.error('Background', 'Error loading state:', error);
             currentWidth = DEFAULT_WIDTH;
             customPresets = [];
             hiddenBuiltInPresets = [];

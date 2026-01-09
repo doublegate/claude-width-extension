@@ -4,13 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Firefox extension (Manifest V2) that customizes the chat width on claude.ai. Allows users to adjust the main chat area from 40-100% width via a popup UI, without affecting the sidebar. Version 1.9.0 adds configuration profiles with browser sync support, allowing users to create up to 8 named profiles with distinct settings. Includes enhanced styling for typography controls (font size, line height, padding), display modes (compact, comfortable, spacious, custom), code block enhancements (max-height, word wrap, collapse all), and visual tweaks (timestamps, avatars, bubble styles). Settings can be imported/exported as JSON and synced across browsers via Firefox Sync.
+Firefox extension (Manifest V2) that customizes the chat width on claude.ai. Allows users to adjust the main chat area from 40-100% width via a popup UI, without affecting the sidebar. Version 1.9.1 adds ESLint v9 flat config, pre-commit hooks, JSDoc type definitions, and enhanced debug logging. Version 1.9.0 added configuration profiles with browser sync support, allowing users to create up to 8 named profiles with distinct settings. Includes enhanced styling for typography controls (font size, line height, padding), display modes (compact, comfortable, spacious, custom), code block enhancements (max-height, word wrap, collapse all), and visual tweaks (timestamps, avatars, bubble styles). Settings can be imported/exported as JSON and synced across browsers via Firefox Sync.
 
 ## Build & Development
 
 ```bash
 # Build XPI package (from project root)
-zip -r build/claude-width-customizer-v1.9.0.xpi . -x "*.git*" -x "build/*" -x "*.DS_Store" -x "CLAUDE.md" -x ".claude/*" -x "docs/*" -x "images/*" -x "tests/*" -x "node_modules/*" -x "coverage/*" -x "*.config.js"
+zip -r build/claude-width-customizer-v1.9.1.xpi . -x "*.git*" -x "build/*" -x "*.DS_Store" -x "CLAUDE.md" -x ".claude/*" -x "docs/*" -x "images/*" -x "tests/*" -x "node_modules/*" -x "coverage/*" -x "*.config.js" -x ".husky/*"
 
 # Development testing (no build step required)
 # 1. Open Firefox → about:debugging → This Firefox
@@ -22,6 +22,8 @@ npm test              # Run all 281 tests
 npm run test:coverage # Run with coverage report
 npm run test:watch    # Run in watch mode
 npm run check         # Verify JS syntax
+npm run lint          # Run ESLint (v9 flat config)
+npm run lint:fix      # Auto-fix ESLint issues
 ```
 
 Development dependencies (devDependencies only - not required for extension):

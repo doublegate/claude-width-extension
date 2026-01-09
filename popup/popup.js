@@ -27,7 +27,7 @@
  * - Alt+Up/Down: Reorder custom presets
  *
  * @author DoubleGate
- * @version 1.9.0
+ * @version 1.9.1
  * @license MIT
  *
  * Changelog:

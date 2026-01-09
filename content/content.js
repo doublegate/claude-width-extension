@@ -2,7 +2,7 @@
  * Claude Chat Width Customizer - Content Script
  * ==============================================
  *
- * VERSION 1.9.0 - Sync & Profiles Support
+ * VERSION 1.9.1 - Technical Debt Remediation
  *
  * Injected into claude.ai pages to apply width customizations to the chat area.
  * Works with the background script to handle keyboard shortcuts for preset
@@ -28,7 +28,7 @@
  * - PERFORMANCE: Eliminated O(n) DOM queries - now O(1) root element updates
  *
  * @author DoubleGate
- * @version 1.9.0
+ * @version 1.9.1
  * @license MIT
  */
 
@@ -1642,10 +1642,11 @@
                 sendResponse({ success: true, currentWidth: DEFAULT_WIDTH_PERCENT });
                 break;
 
-            case 'cyclePresets':
+            case 'cyclePresets': {
                 const newWidth = cycleToNextPreset();
                 sendResponse({ success: true, currentWidth: newWidth });
                 break;
+            }
 
             case 'toggleDefault':
                 toggleDefault().then(width => {
@@ -1660,11 +1661,12 @@
                 });
                 return true; // Async response
 
-            case 'toggleCodeBlocks':
+            case 'toggleCodeBlocks': {
                 const collapse = message.collapse !== undefined ? message.collapse : !enhancedSettings[ENHANCED_KEYS.CODE_BLOCKS_COLLAPSED];
                 toggleAllCodeBlocks(collapse);
                 sendResponse({ success: true, collapsed: collapse });
                 break;
+            }
 
             case 'getEnhancedSettings':
                 sendResponse({
@@ -1702,7 +1704,7 @@
     // =========================================================================
 
     async function initialize() {
-        console.log('[Claude Width] Initializing content script v1.9.0...');
+        console.log('[Claude Width] Initializing content script v1.9.1...');
 
         try {
             // Load saved width preference

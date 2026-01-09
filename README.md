@@ -215,6 +215,18 @@ DoubleGate - [GitHub](https://github.com/doublegate)
 
 ## Changelog
 
+### v1.9.1 (Technical Debt Remediation)
+- **New**: ESLint v9.x flat config (`eslint.config.js`) for automated code quality checks
+- **New**: Pre-commit hooks with husky and lint-staged for quality gates
+- **New**: JSDoc type definitions for Profile, CustomPreset, EnhancedSettings, and other data structures
+- **New**: Enhanced `ClaudeWidthLogger` with configurable log levels and DEBUG mode
+- **Improved**: Vitest coverage configuration documented (IIFE pattern limitation explained)
+- **Technical**: Fixed 5 ESLint errors (regex escapes, case block lexical declarations)
+- **Technical**: Added `@eslint/js` dependency for flat config support
+- **Technical**: Fresh npm dependencies (vitest 4.x, esbuild 0.27.x)
+- **Documentation**: Updated CONTRIBUTING.md with test command documentation
+- **Tests**: All 281 tests continue to pass
+
 ### v1.9.0 (Sync & Profiles)
 - **New**: Configuration profiles - create up to 8 named profiles (Work, Personal, Reading, etc.)
 - **New**: Profile switcher in popup header for quick profile switching

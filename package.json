@@ -1,6 +1,6 @@
 {
   "name": "claude-width-extension",
-  "version": "1.9.0",
+  "version": "1.9.1",
   "description": "Firefox extension to customize chat width on claude.ai",
   "private": true,
   "type": "module",
@@ -11,14 +11,35 @@
     "test:ui": "vitest --ui",
     "lint": "eslint lib/ popup/ content/ background/ options/",
     "lint:fix": "eslint --fix lib/ popup/ content/ background/ options/",
-    "check": "node --check lib/constants.js && node --check popup/popup.js && node --check content/content.js && node --check background/background.js && node --check options/options.js"
+    "check": "node --check lib/constants.js && node --check popup/popup.js && node --check content/content.js && node --check background/background.js && node --check options/options.js",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "lib/**/*.js": [
+      "eslint"
+    ],
+    "popup/**/*.js": [
+      "eslint"
+    ],
+    "content/**/*.js": [
+      "eslint"
+    ],
+    "background/**/*.js": [
+      "eslint"
+    ],
+    "options/**/*.js": [
+      "eslint"
+    ]
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.2",
     "@vitest/coverage-v8": "^4.0.16",
     "@vitest/ui": "^4.0.16",
-    "eslint": "^9.15.0",
     "esbuild": "0.27.2",
+    "eslint": "^9.15.0",
+    "husky": "^9.1.7",
     "jsdom": "^25.0.0",
+    "lint-staged": "^16.2.7",
     "vitest": "^4.0.16"
   },
   "engines": {

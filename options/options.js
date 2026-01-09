@@ -9,7 +9,7 @@
  * - Reset to defaults
  *
  * @author DoubleGate
- * @version 1.9.0
+ * @version 1.9.1
  * @license MIT
  */
 
@@ -474,7 +474,7 @@
                 path.setAttribute('d', 'M11.5 2.5L13.5 4.5L5 13H3V11L11.5 2.5Z');
                 path.setAttribute('stroke-linejoin', 'round');
                 break;
-            case 'duplicate':
+            case 'duplicate': {
                 const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
                 rect.setAttribute('x', '5');
                 rect.setAttribute('y', '5');
@@ -487,7 +487,8 @@
                 path.setAttribute('d', 'M3 11V3C3 2.44772 3.44772 2 4 2H12');
                 path.setAttribute('stroke-linecap', 'round');
                 break;
-            case 'delete':
+            }
+            case 'delete': {
                 path.setAttribute('d', 'M2 4H14M5 4V2H11V4M6 7V12M10 7V12');
                 path.setAttribute('stroke-linecap', 'round');
                 path.setAttribute('stroke-linejoin', 'round');
@@ -498,6 +499,7 @@
                 path2.setAttribute('stroke-linejoin', 'round');
                 svg.appendChild(path2);
                 break;
+            }
         }
 
         svg.appendChild(path);

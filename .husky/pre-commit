@@ -1,0 +1,6 @@
+#!/bin/sh
+
+# Claude Width Extension - Pre-commit Hook
+# Runs lint-staged to check staged files before commit
+
+npx lint-staged
