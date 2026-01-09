@@ -1,15 +1,66 @@
+# ============================================
+# Claude Width Extension - .gitignore
+# ============================================
+
 # Build artifacts
+# ---------------
 *.xpi
 *.zip
 build/
 web-ext-artifacts/
+dist/
+
+# Dependencies
+# ------------
+node_modules/
+.pnp/
+.pnp.js
+
+# Package manager locks (using npm - ignore others)
+yarn.lock
+pnpm-lock.yaml
+
+# Package manager logs and cache
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm/
+.yarn/
+
+# Test coverage reports
+# ---------------------
+coverage/
+.nyc_output/
+
+# Linting and formatting cache
+# ----------------------------
+.eslintcache
+.stylelintcache
+.prettiercache
+
+# Vitest
+# ------
+.vitest/
 
 # Claude Code settings (local only)
+# ---------------------------------
 .claude/
 CLAUDE.local.md
 */CLAUDE.md
 
+# Environment files (security)
+# ----------------------------
+.env
+.env.local
+.env.*.local
+.env.development
+.env.test
+.env.production
+*.pem
+*.key
+
 # OS generated files
+# ------------------
 .DS_Store
 .DS_Store?
 ._*
@@ -17,21 +68,38 @@ CLAUDE.local.md
 .Trashes
 ehthumbs.db
 Thumbs.db
+Desktop.ini
 
 # IDE / Editor directories
+# ------------------------
 .idea/
 .vscode/
 *.swp
 *.swo
 *~
+*.sublime-workspace
+*.sublime-project
+.project
+.classpath
+.settings/
 
-# Node modules (if using web-ext or other tools)
-node_modules/
-
-# Test coverage reports
-coverage/
-
-# Temporary files
+# Temporary and backup files
+# --------------------------
 *.tmp
 *.temp
 *.log
+*.bak
+*.backup
+*.old
+*~
+
+# Debug files
+# -----------
+*.map.js
+.cache/
+
+# Optional: Local development
+# ---------------------------
+.local/
+tmp/
+temp/
