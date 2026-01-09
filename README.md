@@ -47,7 +47,7 @@ A Firefox extension that allows you to customize the width of the text input/out
 cd claude-width-extension
 
 # Create the XPI file (ZIP with .xpi extension)
-zip -r build/claude-width-customizer-v1.8.3.xpi . -x "*.git*" -x "build/*" -x "*.DS_Store" -x "CLAUDE.md" -x ".claude/*" -x "docs/*" -x "images/*" -x "tests/*" -x "node_modules/*" -x "coverage/*" -x "*.config.js"
+zip -r build/claude-width-customizer-v1.8.4.xpi . -x "*.git*" -x "build/*" -x "*.DS_Store" -x "CLAUDE.md" -x ".claude/*" -x "docs/*" -x "images/*" -x "tests/*" -x "node_modules/*" -x "coverage/*" -x "*.config.js"
 ```
 
 ## Usage
@@ -210,6 +210,16 @@ MIT License - feel free to modify and distribute.
 DoubleGate - [GitHub](https://github.com/doublegate)
 
 ## Changelog
+
+### v1.8.4 (Toggle Control Fix)
+- **Fixed**: Word Wrap toggle in Code Blocks section now responds to clicks
+- **Fixed**: Show Timestamps toggle in Visual Tweaks section now works correctly
+- **Fixed**: Show Avatars toggle in Visual Tweaks section now works correctly
+- **Fixed**: All toggle switch controls now have proper clickable area (full switch, not just handle)
+- **Technical**: Toggle input elements now use `position: absolute; width: 100%; height: 100%` for full coverage
+- **Technical**: Added `z-index: 1` to ensure toggle inputs are above decorative slider elements
+- **Technical**: Removed `width: 0; height: 0` that was preventing click events from registering
+- **UI/UX**: Toggle switches now respond to clicks anywhere on the switch, not just the small slider handle
 
 ### v1.8.3 (Advanced Styling Fix)
 - **Fixed**: Word Wrap toggle now correctly applies/removes word wrapping from code blocks

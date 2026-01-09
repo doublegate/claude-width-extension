@@ -1525,9 +1525,13 @@ body {
 }
 
 .toggle-input {
+    position: absolute;
+    width: 100%;
+    height: 100%;
     opacity: 0;
-    width: 0;
-    height: 0;
+    cursor: pointer;
+    z-index: 1;
+    margin: 0;
 }
 
 .toggle-slider {
