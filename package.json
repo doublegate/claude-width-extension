@@ -33,14 +33,14 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.2",
-    "@vitest/coverage-v8": "^4.0.16",
-    "@vitest/ui": "^4.0.16",
+    "@vitest/coverage-v8": "^4.1.11",
+    "@vitest/ui": "^4.1.11",
     "esbuild": "0.27.2",
     "eslint": "^9.15.0",
     "husky": "^9.1.7",
     "jsdom": "^25.0.0",
     "lint-staged": "^16.2.7",
-    "vitest": "^4.0.16"
+    "vitest": "^4.1.11"
   },
   "engines": {
     "node": ">=20.19.0"
