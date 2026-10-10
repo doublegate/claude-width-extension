@@ -722,4 +722,157 @@ describe('Content Script', () => {
       expect(document.querySelector('.CodeBlock')).toBeTruthy();
     });
   });
+
+  describe('Dynamic Responsive Sizing (v1.9.2)', () => {
+    /**
+     * Test implementation of viewport width detection.
+     */
+    function getViewportWidth() {
+      return window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth;
+    }
+
+    /**
+     * Test implementation of effective width calculation.
+     */
+    function calculateEffectiveWidth(userWidth) {
+      const NARROW_VIEWPORT_PX = 1024;
+      const MOBILE_VIEWPORT_PX = 768;
+      const MIN_EFFECTIVE_WIDTH = 95;
+
+      const viewportWidth = getViewportWidth();
+
+      // On mobile viewports, always use 100%
+      if (viewportWidth < MOBILE_VIEWPORT_PX) {
+        return 100;
+      }
+
+      // On narrow viewports, ensure we don't go below 95%
+      if (viewportWidth < NARROW_VIEWPORT_PX) {
+        return Math.max(userWidth, MIN_EFFECTIVE_WIDTH);
+      }
+
+      // On desktop viewports, use user's configured width
+      return userWidth;
+    }
+
+    it('should return 100% on mobile viewport (<768px)', () => {
+      // Mock a mobile viewport
+      const originalInnerWidth = window.innerWidth;
+      Object.defineProperty(window, 'innerWidth', {
+        writable: true,
+        configurable: true,
+        value: 400
+      });
+
+      expect(calculateEffectiveWidth(50)).toBe(100);
+      expect(calculateEffectiveWidth(70)).toBe(100);
+      expect(calculateEffectiveWidth(85)).toBe(100);
+
+      // Restore
+      Object.defineProperty(window, 'innerWidth', {
+        writable: true,
+        configurable: true,
+        value: originalInnerWidth
+      });
+    });
+
+    it('should use minimum 95% on narrow viewport (768-1023px)', () => {
+      // Mock a tablet/narrow viewport
+      const originalInnerWidth = window.innerWidth;
+      Object.defineProperty(window, 'innerWidth', {
+        writable: true,
+        configurable: true,
+        value: 900
+      });
+
+      expect(calculateEffectiveWidth(50)).toBe(95);  // Adjusted up from 50%
+      expect(calculateEffectiveWidth(70)).toBe(95);  // Adjusted up from 70%
+      expect(calculateEffectiveWidth(85)).toBe(95);  // Adjusted up from 85%
+      expect(calculateEffectiveWidth(95)).toBe(95);  // Stays at 95%
+      expect(calculateEffectiveWidth(100)).toBe(100); // Stays at 100%
+
+      // Restore
+      Object.defineProperty(window, 'innerWidth', {
+        writable: true,
+        configurable: true,
+        value: originalInnerWidth
+      });
+    });
+
+    it('should use user preference on desktop viewport (>=1024px)', () => {
+      // Mock a desktop viewport
+      const originalInnerWidth = window.innerWidth;
+      Object.defineProperty(window, 'innerWidth', {
+        writable: true,
+        configurable: true,
+        value: 1920
+      });
+
+      expect(calculateEffectiveWidth(50)).toBe(50);
+      expect(calculateEffectiveWidth(70)).toBe(70);
+      expect(calculateEffectiveWidth(85)).toBe(85);
+      expect(calculateEffectiveWidth(100)).toBe(100);
+
+      // Restore
+      Object.defineProperty(window, 'innerWidth', {
+        writable: true,
+        configurable: true,
+        value: originalInnerWidth
+      });
+    });
+
+    it('should handle edge cases at breakpoints', () => {
+      const originalInnerWidth = window.innerWidth;
+
+      // Exactly at mobile breakpoint (768px) - should be narrow behavior
+      Object.defineProperty(window, 'innerWidth', {
+        writable: true,
+        configurable: true,
+        value: 768
+      });
+      expect(calculateEffectiveWidth(50)).toBe(95);
+
+      // Exactly at desktop breakpoint (1024px) - should be desktop behavior
+      Object.defineProperty(window, 'innerWidth', {
+        writable: true,
+        configurable: true,
+        value: 1024
+      });
+      expect(calculateEffectiveWidth(50)).toBe(50);
+
+      // Restore
+      Object.defineProperty(window, 'innerWidth', {
+        writable: true,
+        configurable: true,
+        value: originalInnerWidth
+      });
+    });
+
+    it('should never make chat narrower than Claude default on small viewports', () => {
+      const originalInnerWidth = window.innerWidth;
+
+      // Test across various small viewport sizes
+      const smallViewports = [320, 480, 600, 768, 900, 1000];
+      
+      for (const width of smallViewports) {
+        Object.defineProperty(window, 'innerWidth', {
+          writable: true,
+          configurable: true,
+          value: width
+        });
+
+        // Even with user preference of 40% (minimum), 
+        // effective width should be 95%+ on narrow or 100% on mobile
+        const effectiveWidth = calculateEffectiveWidth(40);
+        expect(effectiveWidth).toBeGreaterThanOrEqual(95);
+      }
+
+      // Restore
+      Object.defineProperty(window, 'innerWidth', {
+        writable: true,
+        configurable: true,
+        value: originalInnerWidth
+      });
+    });
+  });
 });
