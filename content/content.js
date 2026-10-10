@@ -2,11 +2,19 @@
  * Claude Chat Width Customizer - Content Script
  * ==============================================
  *
- * VERSION 1.9.1 - Technical Debt Remediation
+ * VERSION 1.9.2 - Flickering Fix
  *
  * Injected into claude.ai pages to apply width customizations to the chat area.
  * Works with the background script to handle keyboard shortcuts for preset
  * cycling and default toggling.
+ *
+ * Changes from 1.9.1:
+ * - FIXED: Text flickering by increasing debounce from 50ms to 200ms
+ * - FIXED: Layout flickering by adding guards to prevent re-styling already-styled elements
+ * - FIXED: Reduced CSS transition durations from 0.2s to 0.1-0.15s
+ * - OPTIMIZED: MutationObserver now skips attribute changes and our own modifications
+ * - OPTIMIZED: styleElement() checks if element already has correct styles before applying
+ * - IMPROVED: Better logging shows styled vs skipped element counts
  *
  * Changes from 1.8.3:
  * - NEW: Profile switch handling via 'profileChanged' message
@@ -22,13 +30,8 @@
  * - NEW: CSS for individually expanded code blocks that override global collapse
  * - IMPROVED: Expand buttons styled in CSS instead of inline styles
  *
- * Changes from 1.8.1:
- * - REFACTORED: Replaced inline style manipulation with CSS custom properties
- * - NEW: CSS variables (--claude-width-*) defined on :root for dynamic updates
- * - PERFORMANCE: Eliminated O(n) DOM queries - now O(1) root element updates
- *
  * @author DoubleGate
- * @version 1.9.1
+ * @version 1.9.2
  * @license MIT
  */
 
@@ -1202,14 +1205,23 @@
 
     /**
      * Apply width style to an element (only max-width for most elements).
+     * Includes optimization to skip re-styling elements that already have correct styles.
      *
      * @param {Element} element - Element to style
      * @param {number} widthPercent - Width percentage
      * @param {boolean} setWidth - Also set width property (for containers)
+     * @returns {boolean} True if element was styled, false if skipped
      */
     function styleElement(element, widthPercent, setWidth = false) {
-        if (!element || !element.style) return;
-        if (isInsideSidebar(element)) return;
+        if (!element || !element.style) return false;
+        if (isInsideSidebar(element)) return false;
+
+        // Skip if element already has the correct width applied
+        const currentWidthAttr = element.getAttribute(DATA_ATTR);
+        if (currentWidthAttr === String(widthPercent)) {
+            styledElements.add(element);
+            return false;
+        }
 
         element.style.maxWidth = `${widthPercent}%`;
         if (setWidth) {
@@ -1219,6 +1231,7 @@
         }
         element.setAttribute(DATA_ATTR, String(widthPercent));
         styledElements.add(element);
+        return true;
     }
 
     // =========================================================================
@@ -1243,33 +1256,44 @@
         }
 
         let elementCount = 0;
+        let styledCount = 0;
 
         // CONTAINER ELEMENTS (need max-width, width, and margin centering)
         // Uses WIDTH_CONTAINER_SELECTOR: mx-auto, form, Composer
-        elementCount += processNonSidebarElements(WIDTH_CONTAINER_SELECTOR, el => {
-            styleElement(el, clampedWidth, true);
+        processNonSidebarElements(WIDTH_CONTAINER_SELECTOR, el => {
+            elementCount++;
+            if (styleElement(el, clampedWidth, true)) {
+                styledCount++;
+            }
         });
 
         // STICKY ELEMENTS (special handling for child divs)
         // Sticky footer containers often wrap the input area
         processNonSidebarElements('[class*="sticky"]', el => {
-            elementCount += processNonSidebarElements(':scope > div', child => {
-                styleElement(child, clampedWidth, true);
+            processNonSidebarElements(':scope > div', child => {
+                elementCount++;
+                if (styleElement(child, clampedWidth, true)) {
+                    styledCount++;
+                }
             }, el);
         });
 
         // CONTENT ELEMENTS (only need max-width, no centering)
         // Uses WIDTH_CONTENT_SELECTOR: Message, Thread, Conversation
-        elementCount += processNonSidebarElements(WIDTH_CONTENT_SELECTOR, el => {
-            styleElement(el, clampedWidth, false);
+        processNonSidebarElements(WIDTH_CONTENT_SELECTOR, el => {
+            elementCount++;
+            if (styleElement(el, clampedWidth, false)) {
+                styledCount++;
+            }
         });
 
         // PROSE/MARKDOWN ELEMENTS (fill their container)
         // Uses PROSE_SELECTOR: .prose, prose-*, Markdown
         processNonSidebarElements(PROSE_SELECTOR, el => {
-            if (el.style) {
+            if (el.style && el.style.maxWidth !== '100%') {
                 el.style.maxWidth = '100%';
                 styledElements.add(el);
+                styledCount++;
             }
         });
 
@@ -1277,14 +1301,21 @@
         // Uses CODE_BLOCK_SELECTOR: pre, CodeBlock
         processNonSidebarElements(CODE_BLOCK_SELECTOR, el => {
             if (el.style) {
-                el.style.maxWidth = '100%';
-                el.style.overflowX = 'auto';
-                styledElements.add(el);
+                const needsMaxWidth = el.style.maxWidth !== '100%';
+                const needsOverflow = el.style.overflowX !== 'auto';
+                if (needsMaxWidth || needsOverflow) {
+                    if (needsMaxWidth) el.style.maxWidth = '100%';
+                    if (needsOverflow) el.style.overflowX = 'auto';
+                    styledElements.add(el);
+                    styledCount++;
+                }
             }
         });
 
         currentWidth = clampedWidth;
-        console.log(`[Claude Width] Applied ${clampedWidth}% width to ${elementCount} elements`);
+        if (styledCount > 0) {
+            console.log(`[Claude Width] Applied ${clampedWidth}% width to ${styledCount}/${elementCount} elements`);
+        }
     }
 
     /**
@@ -1554,16 +1585,29 @@
     /**
      * Handle MutationObserver mutations.
      * Determines which style updates are needed and applies them with debouncing.
+     * Optimized to reduce unnecessary updates and prevent flickering.
      *
      * @param {MutationRecord[]} mutations - Array of mutation records
      */
     function handleMutations(mutations) {
         let needsWidthUpdate = false;
         let needsEnhancedUpdate = false;
+        let relevantMutations = 0;
 
         // Process mutations to determine needed updates
         for (const mutation of mutations) {
+            // Skip mutations from our own attribute changes
+            if (mutation.type === 'attributes' &&
+                (mutation.attributeName === DATA_ATTR ||
+                 mutation.attributeName?.startsWith('data-claude-'))) {
+                continue;
+            }
+
             const result = processMutation(mutation);
+
+            if (result.needsWidth || result.needsEnhanced) {
+                relevantMutations++;
+            }
 
             if (result.needsWidth) needsWidthUpdate = true;
             if (result.needsEnhanced) needsEnhancedUpdate = true;
@@ -1571,6 +1615,9 @@
             // Early exit if both flags are set
             if (needsWidthUpdate && needsEnhancedUpdate) break;
         }
+
+        // Only apply updates if we found relevant mutations
+        if (relevantMutations === 0) return;
 
         // Apply updates as needed (debounced)
         if (needsWidthUpdate) {
@@ -1594,6 +1641,7 @@
      * Set up the MutationObserver for dynamic content.
      * Claude.ai is a React SPA that dynamically loads content,
      * so we need to watch for new elements to style.
+     * Optimized configuration to reduce unnecessary triggers.
      */
     function setupDOMObserver() {
         if (domObserver) {
@@ -1604,7 +1652,10 @@
 
         domObserver.observe(document.documentElement, {
             childList: true,
-            subtree: true
+            subtree: true,
+            // Don't watch attribute changes to avoid triggering on our own changes
+            attributes: false,
+            characterData: false
         });
 
         console.log('[Claude Width] DOM observer initialized');

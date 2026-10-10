@@ -1,6 +1,6 @@
 # Claude Chat Width Customizer
 
-**Version 1.9.1** | Firefox Extension (Manifest V2)
+**Version 1.9.2** | Firefox Extension (Manifest V2)
 
 A Firefox extension that allows you to customize the width of the chat interface on [claude.ai](https://claude.ai). Features configuration profiles, Firefox Sync integration, enhanced styling options, and comprehensive accessibility support.
 
@@ -55,7 +55,7 @@ A Firefox extension that allows you to customize the width of the chat interface
 cd claude-width-extension
 
 # Create the XPI file (ZIP with .xpi extension)
-zip -r build/claude-width-customizer-v1.9.1.xpi . \
+zip -r build/claude-width-customizer-v1.9.2.xpi . \
   -x "*.git*" -x "build/*" -x "*.DS_Store" -x "CLAUDE.md" \
   -x ".claude/*" -x "docs/*" -x "images/*" -x "tests/*" \
   -x "node_modules/*" -x "coverage/*" -x "*.config.js" \
@@ -200,7 +200,7 @@ The project uses Husky and lint-staged to automatically run ESLint on staged Jav
 
 ```
 claude-width-extension/
-├── manifest.json           # Extension manifest (Manifest V2, v1.9.1)
+├── manifest.json           # Extension manifest (Manifest V2, v1.9.2)
 ├── README.md               # This documentation
 ├── CONTRIBUTING.md         # Contribution guidelines
 ├── LICENSE                 # MIT license
