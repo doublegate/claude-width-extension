@@ -4,13 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Firefox extension (Manifest V2) that customizes the chat width on claude.ai. Allows users to adjust the main chat area from 40-100% width via a popup UI, without affecting the sidebar. Version 1.9.1 adds ESLint v9 flat config, pre-commit hooks, JSDoc type definitions, and enhanced debug logging. Version 1.9.0 added configuration profiles with browser sync support, allowing users to create up to 8 named profiles with distinct settings. Includes enhanced styling for typography controls (font size, line height, padding), display modes (compact, comfortable, spacious, custom), code block enhancements (max-height, word wrap, collapse all), and visual tweaks (timestamps, avatars, bubble styles). Settings can be imported/exported as JSON and synced across browsers via Firefox Sync.
+Firefox extension (Manifest V2) that customizes the chat width on claude.ai. Allows users to adjust the main chat area from 40-100% width via a popup UI, without affecting the sidebar. Version 1.9.2 adds dynamic responsive sizing - the extension automatically adapts to viewport width and never makes the chat narrower than Claude's default behavior on small windows (mobile/half-screen). Version 1.9.1 adds ESLint v9 flat config, pre-commit hooks, JSDoc type definitions, and enhanced debug logging. Version 1.9.0 added configuration profiles with browser sync support, allowing users to create up to 8 named profiles with distinct settings. Includes enhanced styling for typography controls (font size, line height, padding), display modes (compact, comfortable, spacious, custom), code block enhancements (max-height, word wrap, collapse all), and visual tweaks (timestamps, avatars, bubble styles). Settings can be imported/exported as JSON and synced across browsers via Firefox Sync.
 
 ## Build & Development
 
 ```bash
 # Build XPI package (from project root)
-zip -r build/claude-width-customizer-v1.9.1.xpi . -x "*.git*" -x "build/*" -x "*.DS_Store" -x "CLAUDE.md" -x ".claude/*" -x "docs/*" -x "images/*" -x "tests/*" -x "node_modules/*" -x "coverage/*" -x "*.config.js" -x ".husky/*"
+zip -r build/claude-width-customizer-v1.9.2.xpi . -x "*.git*" -x "build/*" -x "*.DS_Store" -x "CLAUDE.md" -x ".claude/*" -x "docs/*" -x "images/*" -x "tests/*" -x "node_modules/*" -x "coverage/*" -x "*.config.js" -x ".husky/*"
 
 # Development testing (no build step required)
 # 1. Open Firefox → about:debugging → This Firefox
@@ -65,6 +65,23 @@ popup.js ──storage.local.set()──> browser.storage      Badge/Context Men
 ### Key Mechanism: Sidebar Exclusion
 
 The extension must NOT affect sidebar elements. `isInsideSidebar()` walks up the DOM tree checking against `SIDEBAR_INDICATORS` array (nav, aside, `[class*="Sidebar"]`, etc.) before applying any styles.
+
+### Dynamic Responsive Sizing (v1.9.2)
+
+The extension implements intelligent responsive behavior to never make the chat narrower than Claude's default width on small viewports:
+
+**Breakpoints:**
+- **Mobile (< 768px)**: Always uses 100% width (Claude's default)
+- **Narrow/Tablet (768-1023px)**: Uses max(userWidth, 95%) to avoid reducing width
+- **Desktop (≥ 1024px)**: Uses user's configured width percentage
+
+**Implementation:**
+- `calculateEffectiveWidth()` adjusts the user's preference based on viewport width
+- `getViewportWidth()` detects current window size
+- Window resize listener reapplies styles when viewport changes
+- Prevents the extension from narrowing the chat on half-screen or small windows
+
+This solves the issue where narrow browser windows would have the chat width reduced further by the extension, making it harder to read. Now the extension only makes the chat wider than Claude's default, never narrower.
 
 ### DOM Persistence
 
@@ -353,6 +370,8 @@ When Claude updates their UI, selectors may break. Debug process:
 
 | Version | Date | Highlights |
 |---------|------|------------|
+| v1.9.2 | 2026-10-10 | Dynamic responsive sizing - never makes chat narrower than Claude's default on small viewports |
+| v1.9.1 | 2026-01-08 | ESLint v9 flat config, pre-commit hooks, JSDoc type definitions, enhanced debug logging |
 | v1.9.0 | 2026-01-08 | Configuration profiles with browser sync, import/export, up to 8 profiles |
 | v1.8.4 | 2026-01-08 | Fixed non-clickable toggle switches in Advanced Styling popup controls |
 | v1.8.3 | 2026-01-08 | Fixed visibility toggles, bubble styles, code block features using data attributes |

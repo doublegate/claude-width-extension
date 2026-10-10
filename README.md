@@ -1,13 +1,14 @@
 # Claude Chat Width Customizer
 
-**Version 1.9.1** | Firefox Extension (Manifest V2)
+**Version 1.9.2** | Firefox Extension (Manifest V2)
 
-A Firefox extension that allows you to customize the width of the chat interface on [claude.ai](https://claude.ai). Features configuration profiles, Firefox Sync integration, enhanced styling options, and comprehensive accessibility support.
+A Firefox extension that allows you to customize the width of the chat interface on [claude.ai](https://claude.ai). Features dynamic responsive sizing, configuration profiles, Firefox Sync integration, enhanced styling options, and comprehensive accessibility support.
 
 ![Claude Chat Width Customizer Banner](images/CCWC-Banner_Logo.jpg)
 
 ## Features
 
+- **Dynamic Responsive Sizing** (v1.9.2): Intelligently adapts to viewport width - never makes chat narrower than Claude's default on small windows (mobile/half-screen)
 - **Adjustable Width**: Set chat width from 40% to 100% of the viewport
 - **Quick Presets**: One-click buttons for Narrow (50%), Medium (70%), Wide (85%), and Full (100%) widths
 - **Custom Presets**: Create up to 4 custom presets with your favorite widths, drag-and-drop reordering, and favorites marking
@@ -27,7 +28,7 @@ A Firefox extension that allows you to customize the width of the chat interface
 - **SPA Compatible**: Works seamlessly with Claude's single-page application navigation
 - **Security Hardened**: Content Security Policy (CSP) enforced, no unsafe DOM operations
 - **Mozilla Add-ons Compliant**: Includes required `data_collection_permissions` declaration
-- **Developer Tooling** (v1.9.1): ESLint v9.x, Vitest test suite (281 tests), pre-commit hooks with Husky
+- **Developer Tooling** (v1.9.1): ESLint v9.x, Vitest test suite (286 tests), pre-commit hooks with Husky
 
 ![Extension Preview](icons/icon-96.png)
 
@@ -55,7 +56,7 @@ A Firefox extension that allows you to customize the width of the chat interface
 cd claude-width-extension
 
 # Create the XPI file (ZIP with .xpi extension)
-zip -r build/claude-width-customizer-v1.9.1.xpi . \
+zip -r build/claude-width-customizer-v1.9.2.xpi . \
   -x "*.git*" -x "build/*" -x "*.DS_Store" -x "CLAUDE.md" \
   -x ".claude/*" -x "docs/*" -x "images/*" -x "tests/*" \
   -x "node_modules/*" -x "coverage/*" -x "*.config.js" \
@@ -127,6 +128,25 @@ Right-click anywhere on claude.ai pages to access the **Claude Width** context m
 | `Alt+Up/Down` | Reorder custom presets |
 
 Note: Global shortcuts can be customized via `about:addons` > gear icon > "Manage Extension Shortcuts"
+
+### Dynamic Responsive Sizing
+
+The extension intelligently adapts to your viewport size to ensure optimal readability:
+
+| Viewport Width | Behavior | Rationale |
+|---------------|----------|-----------|
+| **< 768px** (Mobile) | Always uses 100% width | Matches Claude's default behavior - preserves maximum space on small screens |
+| **768-1023px** (Narrow/Tablet) | Minimum 95% width | Prevents extension from narrowing chat below Claude's default on half-screen windows |
+| **≥ 1024px** (Desktop) | Uses your configured width | Full control - apply any width preference from 40-100% |
+
+**Why this matters:** When you resize your browser to half-screen or use a tablet, Claude naturally uses 100% width for readability. The extension now respects this behavior and only applies width reductions on larger viewports where there's room to spare.
+
+**Example:** If you have 70% width configured:
+- On a 1920px monitor: Chat is 70% wide (1344px)
+- On a 900px window: Chat is 95% wide (855px) instead of 70% (630px)
+- On a phone: Chat is 100% wide (full screen)
+
+This ensures the extension **only makes the chat wider**, never narrower than Claude's default.
 
 ### Configuration Profiles
 
