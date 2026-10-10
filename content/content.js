@@ -2,11 +2,18 @@
  * Claude Chat Width Customizer - Content Script
  * ==============================================
  *
- * VERSION 1.9.1 - Technical Debt Remediation
+ * VERSION 1.9.2 - Dynamic Responsive Sizing
  *
  * Injected into claude.ai pages to apply width customizations to the chat area.
  * Works with the background script to handle keyboard shortcuts for preset
  * cycling and default toggling.
+ *
+ * Changes from 1.9.1:
+ * - NEW: Dynamic responsive sizing - never makes chat narrower than Claude's default
+ * - NEW: Viewport width detection with breakpoints (mobile < 768px, narrow < 1024px)
+ * - NEW: Window resize listener for automatic responsive adjustments
+ * - IMPROVED: calculateEffectiveWidth() ensures 100% on mobile, 95%+ on narrow viewports
+ * - FIXED: Extension no longer reduces width on half-screen or narrow windows
  *
  * Changes from 1.8.3:
  * - NEW: Profile switch handling via 'profileChanged' message
@@ -28,7 +35,7 @@
  * - PERFORMANCE: Eliminated O(n) DOM queries - now O(1) root element updates
  *
  * @author DoubleGate
- * @version 1.9.1
+ * @version 1.9.2
  * @license MIT
  */
 
@@ -187,6 +194,7 @@
     let domObserver = null;
     let applyDebounceTimer = null;
     let styledElements = new Set();
+    let resizeObserver = null;
 
     // Enhanced styling state (v1.8.0)
     let enhancedSettings = { ...ENHANCED_DEFAULTS };
@@ -260,8 +268,72 @@
     ].join(',');
 
     // =========================================================================
+    // RESPONSIVE SIZING CONSTANTS
+    // =========================================================================
+
+    /**
+     * Viewport width breakpoints for dynamic sizing.
+     * Below NARROW_VIEWPORT_PX, Claude naturally uses ~100% width,
+     * so the extension should not reduce it further.
+     */
+    const NARROW_VIEWPORT_PX = 1024;  // Typical tablet/small window breakpoint
+    const MOBILE_VIEWPORT_PX = 768;   // Mobile breakpoint
+
+    /**
+     * Minimum effective width percentage.
+     * Even if user sets a lower value, we'll use this on narrow viewports
+     * to avoid making the chat narrower than Claude's default.
+     */
+    const MIN_EFFECTIVE_WIDTH = 95;
+
+    // =========================================================================
     // HELPER FUNCTIONS
     // =========================================================================
+
+    /**
+     * Get the current viewport width.
+     *
+     * @returns {number} Viewport width in pixels
+     */
+    function getViewportWidth() {
+        return window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth;
+    }
+
+    /**
+     * Calculate the effective width percentage to apply based on viewport width.
+     * On narrow viewports, the extension should never reduce width below Claude's default (100%).
+     * This implements "dynamic mode" - adapts to viewport size to never make chat narrower.
+     *
+     * Strategy:
+     * - Viewport < 768px (mobile): Always use 100% (Claude's default)
+     * - Viewport < 1024px (tablet/half-screen): Use max(userWidth, 95%) to avoid narrowing
+     * - Viewport >= 1024px (desktop): Use user's configured width
+     *
+     * @param {number} userWidth - User's configured width percentage
+     * @returns {number} Effective width percentage to apply
+     */
+    function calculateEffectiveWidth(userWidth) {
+        const viewportWidth = getViewportWidth();
+
+        // On mobile viewports, always use 100% (Claude's default)
+        if (viewportWidth < MOBILE_VIEWPORT_PX) {
+            console.log(`[Claude Width] Mobile viewport (${viewportWidth}px) - using 100%`);
+            return 100;
+        }
+
+        // On narrow viewports (tablet/half-screen), ensure we don't go below 95%
+        // This prevents the extension from making the chat narrower than Claude's default
+        if (viewportWidth < NARROW_VIEWPORT_PX) {
+            const effectiveWidth = Math.max(userWidth, MIN_EFFECTIVE_WIDTH);
+            if (effectiveWidth !== userWidth) {
+                console.log(`[Claude Width] Narrow viewport (${viewportWidth}px) - adjusting ${userWidth}% to ${effectiveWidth}%`);
+            }
+            return effectiveWidth;
+        }
+
+        // On desktop viewports, use user's configured width
+        return userWidth;
+    }
 
     /**
      * Check if an element is inside the sidebar.
@@ -1232,10 +1304,18 @@
      * OPTIMIZATION: Previous implementation used 8 separate querySelectorAll calls.
      * Now uses 4 combined calls using cached selector strings, reducing DOM queries.
      *
+     * DYNAMIC SIZING (v1.9.2): Applies responsive behavior to never make chat narrower
+     * than Claude's default on small viewports.
+     *
      * @param {number} widthPercent - Width percentage to apply
      */
     function applyWidthToChat(widthPercent) {
+        // First clamp to valid range
         const clampedWidth = Math.max(MIN_WIDTH_PERCENT, Math.min(MAX_WIDTH_PERCENT, widthPercent));
+        
+        // Then apply dynamic sizing based on viewport width
+        // This ensures we never make the chat narrower than Claude's default
+        const effectiveWidth = calculateEffectiveWidth(clampedWidth);
 
         // Clear previous styles if width changed
         if (clampedWidth !== currentWidth) {
@@ -1247,21 +1327,21 @@
         // CONTAINER ELEMENTS (need max-width, width, and margin centering)
         // Uses WIDTH_CONTAINER_SELECTOR: mx-auto, form, Composer
         elementCount += processNonSidebarElements(WIDTH_CONTAINER_SELECTOR, el => {
-            styleElement(el, clampedWidth, true);
+            styleElement(el, effectiveWidth, true);
         });
 
         // STICKY ELEMENTS (special handling for child divs)
         // Sticky footer containers often wrap the input area
         processNonSidebarElements('[class*="sticky"]', el => {
             elementCount += processNonSidebarElements(':scope > div', child => {
-                styleElement(child, clampedWidth, true);
+                styleElement(child, effectiveWidth, true);
             }, el);
         });
 
         // CONTENT ELEMENTS (only need max-width, no centering)
         // Uses WIDTH_CONTENT_SELECTOR: Message, Thread, Conversation
         elementCount += processNonSidebarElements(WIDTH_CONTENT_SELECTOR, el => {
-            styleElement(el, clampedWidth, false);
+            styleElement(el, effectiveWidth, false);
         });
 
         // PROSE/MARKDOWN ELEMENTS (fill their container)
@@ -1284,7 +1364,12 @@
         });
 
         currentWidth = clampedWidth;
-        console.log(`[Claude Width] Applied ${clampedWidth}% width to ${elementCount} elements`);
+        
+        if (effectiveWidth !== clampedWidth) {
+            console.log(`[Claude Width] Applied ${effectiveWidth}% width (adjusted from ${clampedWidth}% for viewport) to ${elementCount} elements`);
+        } else {
+            console.log(`[Claude Width] Applied ${clampedWidth}% width to ${elementCount} elements`);
+        }
     }
 
     /**
@@ -1610,6 +1695,31 @@
         console.log('[Claude Width] DOM observer initialized');
     }
 
+    /**
+     * Set up window resize listener for responsive/dynamic sizing.
+     * Reapplies width styles when viewport size changes to ensure
+     * the extension never makes the chat narrower than Claude's default.
+     */
+    function setupResizeListener() {
+        let resizeDebounceTimer = null;
+        const RESIZE_DEBOUNCE_MS = 150;
+
+        const handleResize = () => {
+            if (resizeDebounceTimer) {
+                clearTimeout(resizeDebounceTimer);
+            }
+
+            resizeDebounceTimer = setTimeout(() => {
+                console.log(`[Claude Width] Viewport resized to ${getViewportWidth()}px, reapplying styles`);
+                clearAllStyles();
+                applyWidthToChat(currentWidth);
+            }, RESIZE_DEBOUNCE_MS);
+        };
+
+        window.addEventListener('resize', handleResize);
+        console.log('[Claude Width] Resize listener initialized for dynamic sizing');
+    }
+
     // =========================================================================
     // MESSAGE HANDLING
     // =========================================================================
@@ -1738,8 +1848,9 @@
             browser.storage.onChanged.addListener(handleStorageChange);
             browser.runtime.onMessage.addListener(handleMessage);
             setupDOMObserver();
+            setupResizeListener();
 
-            console.log('[Claude Width] Content script initialized successfully');
+            console.log('[Claude Width] Content script initialized successfully with dynamic sizing');
         } catch (error) {
             console.error('[Claude Width] Initialization error:', error);
         }
