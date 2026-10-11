@@ -21,9 +21,10 @@
  * Smooth transition ONLY for elements marked by our extension.
  * The data-claude-width-applied attribute is added by JavaScript
  * after verifying the element is NOT in the sidebar.
+ * Reduced transition time to minimize visible flickering.
  */
 [data-claude-width-applied] {
-    transition: max-width 0.2s ease-out, width 0.2s ease-out;
+    transition: max-width 0.15s ease-out, width 0.15s ease-out;
 }
 
 /* =========================================================================
@@ -33,42 +34,46 @@
 /**
  * Typography transitions for smooth font-size, line-height, and padding changes.
  * Applied to message containers and chat elements.
+ * Reduced transition times to minimize flickering.
  */
 [data-claude-enhanced-applied] {
     transition:
-        font-size 0.2s ease-out,
-        line-height 0.2s ease-out,
-        padding 0.2s ease-out,
-        margin 0.2s ease-out;
+        font-size 0.1s ease-out,
+        line-height 0.1s ease-out,
+        padding 0.1s ease-out,
+        margin 0.1s ease-out;
 }
 
 /**
  * Code block transitions for max-height and collapse animations.
  * Enables smooth expand/collapse behavior.
+ * Reduced transition time to minimize flickering.
  */
 [data-claude-enhanced-applied] pre,
 [data-claude-enhanced-applied] code {
     transition:
-        max-height 0.3s ease-out,
-        overflow 0.3s ease-out;
+        max-height 0.2s ease-out,
+        overflow 0.2s ease-out;
 }
 
 /**
  * Visual element transitions for smooth show/hide of timestamps and avatars.
+ * Reduced transition time to minimize flickering.
  */
 [data-claude-enhanced-applied] [class*="timestamp" i],
 [data-claude-enhanced-applied] [class*="avatar" i] {
-    transition: opacity 0.2s ease-out, visibility 0.2s ease-out;
+    transition: opacity 0.1s ease-out, visibility 0.1s ease-out;
 }
 
 /**
  * Message bubble style transitions for border-radius and background changes.
+ * Reduced transition time to minimize flickering.
  */
 [data-claude-enhanced-applied] [class*="message" i] {
     transition:
-        border-radius 0.2s ease-out,
-        background-color 0.2s ease-out,
-        border-color 0.2s ease-out;
+        border-radius 0.1s ease-out,
+        background-color 0.1s ease-out,
+        border-color 0.1s ease-out;
 }
 
 /* =========================================================================

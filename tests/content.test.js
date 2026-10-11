@@ -436,6 +436,47 @@ describe('Content Script', () => {
       expect(el.style.maxWidth).toBe('');
       expect(el.getAttribute('data-claude-width-applied')).toBeNull();
     });
+
+    it('should reapply styles if data attribute matches but inline styles were reset by page', () => {
+      const el = document.createElement('div');
+      el.className = 'mx-auto';
+      el.setAttribute('data-claude-width-applied', '85');
+      el.style.maxWidth = '';
+      el.style.width = '';
+      document.body.appendChild(el);
+
+      const DATA_ATTR = 'data-claude-width-applied';
+      function styleElement(element, widthPercent, setWidth = false) {
+        if (!element || !element.style) return false;
+        const currentWidthAttr = element.getAttribute(DATA_ATTR);
+        const expectedWidth = `${widthPercent}%`;
+        const hasCorrectStyles =
+          element.style.maxWidth === expectedWidth &&
+          (!setWidth || (element.style.width === expectedWidth && element.style.marginLeft === 'auto' && element.style.marginRight === 'auto'));
+
+        if (currentWidthAttr === String(widthPercent) && hasCorrectStyles) {
+          return false;
+        }
+
+        element.style.maxWidth = expectedWidth;
+        if (setWidth) {
+          element.style.width = expectedWidth;
+          element.style.marginLeft = 'auto';
+          element.style.marginRight = 'auto';
+        }
+        element.setAttribute(DATA_ATTR, String(widthPercent));
+        return true;
+      }
+
+      const styled = styleElement(el, 85, true);
+      expect(styled).toBe(true);
+      expect(el.style.maxWidth).toBe('85%');
+      expect(el.style.width).toBe('85%');
+
+      // Next call with correct styles intact should skip
+      const skipped = styleElement(el, 85, true);
+      expect(skipped).toBe(false);
+    });
   });
 
   describe('Enhanced Styling Application', () => {

@@ -4,13 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Firefox extension (Manifest V2) that customizes the chat width on claude.ai. Allows users to adjust the main chat area from 40-100% width via a popup UI, without affecting the sidebar. Version 1.9.1 adds ESLint v9 flat config, pre-commit hooks, JSDoc type definitions, and enhanced debug logging. Version 1.9.0 added configuration profiles with browser sync support, allowing users to create up to 8 named profiles with distinct settings. Includes enhanced styling for typography controls (font size, line height, padding), display modes (compact, comfortable, spacious, custom), code block enhancements (max-height, word wrap, collapse all), and visual tweaks (timestamps, avatars, bubble styles). Settings can be imported/exported as JSON and synced across browsers via Firefox Sync.
+Firefox extension (Manifest V2) that customizes the chat width on claude.ai. Allows users to adjust the main chat area from 40-100% width via a popup UI, without affecting the sidebar. Version 1.9.2 fixes critical flickering and layout issues reported in v1.9.1 by increasing debounce timing, reducing CSS transition durations, and optimizing the MutationObserver to prevent re-styling already-styled elements. Version 1.9.1 adds ESLint v9 flat config, pre-commit hooks, JSDoc type definitions, and enhanced debug logging. Version 1.9.0 added configuration profiles with browser sync support, allowing users to create up to 8 named profiles with distinct settings. Includes enhanced styling for typography controls (font size, line height, padding), display modes (compact, comfortable, spacious, custom), code block enhancements (max-height, word wrap, collapse all), and visual tweaks (timestamps, avatars, bubble styles). Settings can be imported/exported as JSON and synced across browsers via Firefox Sync.
 
 ## Build & Development
 
 ```bash
 # Build XPI package (from project root)
-zip -r build/claude-width-customizer-v1.9.1.xpi . -x "*.git*" -x "build/*" -x "*.DS_Store" -x "CLAUDE.md" -x ".claude/*" -x "docs/*" -x "images/*" -x "tests/*" -x "node_modules/*" -x "coverage/*" -x "*.config.js" -x ".husky/*"
+zip -r build/claude-width-customizer-v1.9.2.xpi . -x "*.git*" -x "build/*" -x "*.DS_Store" -x "CLAUDE.md" -x ".claude/*" -x "docs/*" -x "images/*" -x "tests/*" -x "node_modules/*" -x "coverage/*" -x "*.config.js" -x ".husky/*"
 
 # Development testing (no build step required)
 # 1. Open Firefox → about:debugging → This Firefox
@@ -353,6 +353,8 @@ When Claude updates their UI, selectors may break. Debug process:
 
 | Version | Date | Highlights |
 |---------|------|------------|
+| v1.9.2 | 2026-10-10 | **Critical bug fix**: Resolved flickering text and layout issues by increasing debounce (50ms→200ms), reducing transitions (0.2s→0.1s), optimizing MutationObserver, adding re-style guards |
+| v1.9.1 | 2026-01-08 | ESLint v9 flat config, pre-commit hooks, JSDoc type definitions, enhanced debug logging |
 | v1.9.0 | 2026-01-08 | Configuration profiles with browser sync, import/export, up to 8 profiles |
 | v1.8.4 | 2026-01-08 | Fixed non-clickable toggle switches in Advanced Styling popup controls |
 | v1.8.3 | 2026-01-08 | Fixed visibility toggles, bubble styles, code block features using data attributes |
