@@ -1410,17 +1410,20 @@
     }
 
     /**
-     * Debounced version of applyWidthToChat to prevent excessive calls.
+     * Debounced re-application of the current width to newly added elements.
      *
-     * @param {number} widthPercent - Width percentage to apply
+     * Reads `currentWidth` when the timer fires rather than when it is
+     * scheduled: width changes (messages, storage, presets) can land while a
+     * timer is pending, and a captured value would revert them.
      */
-    function applyWidthDebounced(widthPercent) {
+    function applyWidthDebounced() {
         if (applyDebounceTimer) {
             clearTimeout(applyDebounceTimer);
         }
 
         applyDebounceTimer = setTimeout(() => {
-            applyWidthToChat(widthPercent);
+            applyDebounceTimer = null;
+            applyWidthToChat(currentWidth);
         }, TIMING.DEBOUNCE_MS);
     }
 
@@ -1721,7 +1724,7 @@
 
         // Apply updates as needed (debounced)
         if (needsWidthUpdate) {
-            applyWidthDebounced(currentWidth);
+            applyWidthDebounced();
         }
 
         if (needsEnhancedUpdate) {
@@ -1889,9 +1892,9 @@
             injectEnhancedCSS();
 
             // Apply initial styles with delays to catch lazy-loaded content
-            TIMING.INIT_RETRY_INTERVALS.forEach((delay, index) => {
+            TIMING.INIT_RETRY_INTERVALS.forEach(delay => {
                 setTimeout(() => {
-                    applyWidthToChat(index === 0 ? savedWidth : currentWidth);
+                    applyWidthToChat(currentWidth);
                     // Also re-apply enhanced inline styles for lazy-loaded content
                     applyEnhancedInlineStyles();
                 }, delay);
