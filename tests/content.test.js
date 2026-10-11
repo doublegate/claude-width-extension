@@ -9,6 +9,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { createMockClaudeDOM, waitForDOMUpdate, simulateStorageChange } from './setup.js';
 import { setStorageData, mockBrowser, storageListeners, messageListeners } from './mocks/browser.js';
+import '../content/content.js';
 
 describe('Content Script', () => {
   beforeEach(() => {
@@ -761,6 +762,175 @@ describe('Content Script', () => {
       expect(document.querySelectorAll('.Message').length).toBe(2);
       expect(document.querySelector('.Composer')).toBeTruthy();
       expect(document.querySelector('.CodeBlock')).toBeTruthy();
+    });
+  });
+
+  describe('Dynamic Responsive Sizing (v1.9.2)', () => {
+    let originalInnerWidth;
+
+    beforeEach(() => {
+      originalInnerWidth = window.innerWidth;
+      window.__ClaudeWidthContent__.setupResizeListener();
+    });
+
+    afterEach(() => {
+      Object.defineProperty(window, 'innerWidth', {
+        writable: true,
+        configurable: true,
+        value: originalInnerWidth
+      });
+    });
+
+    it('should return 100% on mobile viewport (<768px) via production calculateEffectiveWidth', () => {
+      Object.defineProperty(window, 'innerWidth', {
+        writable: true,
+        configurable: true,
+        value: 400
+      });
+
+      const { calculateEffectiveWidth } = window.__ClaudeWidthContent__;
+      expect(calculateEffectiveWidth(50)).toBe(100);
+      expect(calculateEffectiveWidth(70)).toBe(100);
+      expect(calculateEffectiveWidth(85)).toBe(100);
+    });
+
+    it('should use minimum 95% on narrow viewport (768-1023px) via production calculateEffectiveWidth', () => {
+      Object.defineProperty(window, 'innerWidth', {
+        writable: true,
+        configurable: true,
+        value: 900
+      });
+
+      const { calculateEffectiveWidth } = window.__ClaudeWidthContent__;
+      expect(calculateEffectiveWidth(50)).toBe(95);  // Adjusted up from 50%
+      expect(calculateEffectiveWidth(70)).toBe(95);  // Adjusted up from 70%
+      expect(calculateEffectiveWidth(85)).toBe(95);  // Adjusted up from 85%
+      expect(calculateEffectiveWidth(95)).toBe(95);  // Stays at 95%
+      expect(calculateEffectiveWidth(100)).toBe(100); // Stays at 100%
+    });
+
+    it('should use user preference on desktop viewport (>=1024px) via production calculateEffectiveWidth', () => {
+      Object.defineProperty(window, 'innerWidth', {
+        writable: true,
+        configurable: true,
+        value: 1920
+      });
+
+      const { calculateEffectiveWidth } = window.__ClaudeWidthContent__;
+      expect(calculateEffectiveWidth(50)).toBe(50);
+      expect(calculateEffectiveWidth(70)).toBe(70);
+      expect(calculateEffectiveWidth(85)).toBe(85);
+      expect(calculateEffectiveWidth(100)).toBe(100);
+    });
+
+    it('should handle edge cases at breakpoints via production calculateEffectiveWidth', () => {
+      const { calculateEffectiveWidth } = window.__ClaudeWidthContent__;
+
+      // Exactly at mobile breakpoint (768px) - should be narrow behavior
+      Object.defineProperty(window, 'innerWidth', {
+        writable: true,
+        configurable: true,
+        value: 768
+      });
+      expect(calculateEffectiveWidth(50)).toBe(95);
+
+      // Exactly at desktop breakpoint (1024px) - should be desktop behavior
+      Object.defineProperty(window, 'innerWidth', {
+        writable: true,
+        configurable: true,
+        value: 1024
+      });
+      expect(calculateEffectiveWidth(50)).toBe(50);
+    });
+
+    it('should never make chat narrower than Claude default on small viewports', () => {
+      const { calculateEffectiveWidth } = window.__ClaudeWidthContent__;
+      const smallViewports = [320, 480, 600, 768, 900, 1000];
+
+      for (const width of smallViewports) {
+        Object.defineProperty(window, 'innerWidth', {
+          writable: true,
+          configurable: true,
+          value: width
+        });
+
+        // Even with user preference of 40% (minimum),
+        // effective width should be 95%+ on narrow or 100% on mobile
+        const effectiveWidth = calculateEffectiveWidth(40);
+        expect(effectiveWidth).toBeGreaterThanOrEqual(95);
+      }
+    });
+
+    it('should apply responsive floor to outer container without compounding nested message widths', () => {
+      // Create representative Claude DOM hierarchy: .mx-auto > .Thread > .Message
+      createMockClaudeDOM({ withMessages: true, withComposer: true });
+
+      const container = document.querySelector('.mx-auto');
+      const thread = document.querySelector('.Thread');
+      const message = document.querySelector('.Message');
+      expect(container).toBeTruthy();
+      expect(thread).toBeTruthy();
+      expect(message).toBeTruthy();
+
+      // Narrow viewport (900px), user configured low width (50%)
+      Object.defineProperty(window, 'innerWidth', {
+        writable: true,
+        configurable: true,
+        value: 900
+      });
+
+      const { applyWidthToChat } = window.__ClaudeWidthContent__;
+      applyWidthToChat(50);
+
+      // Outer container must receive the 95% responsive floor
+      expect(container.style.maxWidth).toBe('95%');
+      expect(container.style.width).toBe('95%');
+
+      // Nested elements must be 100% so they don't compound (95% * 95% * 95% = 85.7%)
+      expect(thread.style.maxWidth).toBe('100%');
+      expect(message.style.maxWidth).toBe('100%');
+    });
+
+    it('should dynamically update DOM styles on window resize event dispatch', async () => {
+      createMockClaudeDOM({ withMessages: true, withComposer: true });
+
+      const container = document.querySelector('.mx-auto');
+      const { applyWidthToChat } = window.__ClaudeWidthContent__;
+
+      // Start on desktop with 60%
+      Object.defineProperty(window, 'innerWidth', {
+        writable: true,
+        configurable: true,
+        value: 1400
+      });
+      applyWidthToChat(60);
+      expect(container.style.maxWidth).toBe('60%');
+
+      // Resize to mobile viewport (<768px)
+      Object.defineProperty(window, 'innerWidth', {
+        writable: true,
+        configurable: true,
+        value: 500
+      });
+
+      // Dispatch real resize event and wait for debounced handler (150ms)
+      window.dispatchEvent(new Event('resize'));
+      await new Promise(resolve => setTimeout(resolve, 200));
+
+      expect(container.style.maxWidth).toBe('100%');
+      expect(container.style.width).toBe('100%');
+
+      // Resize to narrow viewport (900px)
+      Object.defineProperty(window, 'innerWidth', {
+        writable: true,
+        configurable: true,
+        value: 900
+      });
+      window.dispatchEvent(new Event('resize'));
+      await new Promise(resolve => setTimeout(resolve, 200));
+
+      expect(container.style.maxWidth).toBe('95%');
+      expect(container.style.width).toBe('95%');
     });
   });
 });

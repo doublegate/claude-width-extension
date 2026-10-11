@@ -2,7 +2,7 @@
  * Claude Chat Width Customizer - Content Script
  * ==============================================
  *
- * VERSION 1.9.2 - Flickering Fix
+ * VERSION 1.9.2 - Flicker Fix & Dynamic Responsive Sizing
  *
  * Injected into claude.ai pages to apply width customizations to the chat area.
  * Works with the background script to handle keyboard shortcuts for preset
@@ -11,11 +11,15 @@
  * Changes from 1.9.1:
  * - FIXED: Text flickering by increasing debounce from 50ms to 200ms
  * - FIXED: Layout flickering by adding guards to prevent re-styling already-styled elements
- * - FIXED: Reduced CSS transition durations from 0.2s to 0.1-0.15s
- * - OPTIMIZED: MutationObserver now skips attribute changes and our own modifications
- * - OPTIMIZED: styleElement() checks if element already has correct styles before applying
+ * - FIXED: Reduced CSS transition durations from 0.2s to 0.15s
+ * - OPTIMIZED: MutationObserver skips attribute changes and handles SPA stylesheet re-injection
+ * - OPTIMIZED: styleElement() verifies inline styles before skipping marked elements
  * - IMPROVED: Better logging shows styled vs skipped element counts
- *
+ * - NEW: Dynamic responsive sizing - never makes chat narrower than Claude's default
+ * - NEW: Viewport width detection with breakpoints (mobile < 768px, narrow < 1024px)
+ * - NEW: Window resize listener for automatic responsive adjustments
+ * - IMPROVED: calculateEffectiveWidth() ensures 100% on mobile, 95%+ on narrow viewports
+ * - FIXED: Responsive floor applies only to outer sizing container, preventing compounding on nested content
  * Changes from 1.8.3:
  * - NEW: Profile switch handling via 'profileChanged' message
  * - NEW: Reloads settings when active profile changes
@@ -263,8 +267,72 @@
     ].join(',');
 
     // =========================================================================
+    // RESPONSIVE SIZING CONSTANTS
+    // =========================================================================
+
+    /**
+     * Viewport width breakpoints for dynamic sizing.
+     * Below NARROW_VIEWPORT_PX, Claude naturally uses ~100% width,
+     * so the extension should not reduce it further.
+     */
+    const NARROW_VIEWPORT_PX = 1024;  // Typical tablet/small window breakpoint
+    const MOBILE_VIEWPORT_PX = 768;   // Mobile breakpoint
+
+    /**
+     * Minimum effective width percentage.
+     * Even if user sets a lower value, we'll use this on narrow viewports
+     * to avoid making the chat narrower than Claude's default.
+     */
+    const MIN_EFFECTIVE_WIDTH = 95;
+
+    // =========================================================================
     // HELPER FUNCTIONS
     // =========================================================================
+
+    /**
+     * Get the current viewport width.
+     *
+     * @returns {number} Viewport width in pixels
+     */
+    function getViewportWidth() {
+        return window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth;
+    }
+
+    /**
+     * Calculate the effective width percentage to apply based on viewport width.
+     * On narrow viewports, the extension should never reduce width below Claude's default (100%).
+     * This implements "dynamic mode" - adapts to viewport size to never make chat narrower.
+     *
+     * Strategy:
+     * - Viewport < 768px (mobile): Always use 100% (Claude's default)
+     * - Viewport < 1024px (tablet/half-screen): Use max(userWidth, 95%) to avoid narrowing
+     * - Viewport >= 1024px (desktop): Use user's configured width
+     *
+     * @param {number} userWidth - User's configured width percentage
+     * @returns {number} Effective width percentage to apply
+     */
+    function calculateEffectiveWidth(userWidth) {
+        const viewportWidth = getViewportWidth();
+
+        // On mobile viewports, always use 100% (Claude's default)
+        if (viewportWidth < MOBILE_VIEWPORT_PX) {
+            console.log(`[Claude Width] Mobile viewport (${viewportWidth}px) - using 100%`);
+            return 100;
+        }
+
+        // On narrow viewports (tablet/half-screen), ensure we don't go below 95%
+        // This prevents the extension from making the chat narrower than Claude's default
+        if (viewportWidth < NARROW_VIEWPORT_PX) {
+            const effectiveWidth = Math.max(userWidth, MIN_EFFECTIVE_WIDTH);
+            if (effectiveWidth !== userWidth) {
+                console.log(`[Claude Width] Narrow viewport (${viewportWidth}px) - adjusting ${userWidth}% to ${effectiveWidth}%`);
+            }
+            return effectiveWidth;
+        }
+
+        // On desktop viewports, use user's configured width
+        return userWidth;
+    }
 
     /**
      * Check if an element is inside the sidebar.
@@ -1250,10 +1318,18 @@
      * OPTIMIZATION: Previous implementation used 8 separate querySelectorAll calls.
      * Now uses 4 combined calls using cached selector strings, reducing DOM queries.
      *
+     * DYNAMIC SIZING (v1.9.2): Applies responsive behavior to never make chat narrower
+     * than Claude's default on small viewports.
+     *
      * @param {number} widthPercent - Width percentage to apply
      */
     function applyWidthToChat(widthPercent) {
+        // First clamp to valid range
         const clampedWidth = Math.max(MIN_WIDTH_PERCENT, Math.min(MAX_WIDTH_PERCENT, widthPercent));
+
+        // Then apply dynamic sizing based on viewport width
+        // This ensures we never make the chat narrower than Claude's default
+        const effectiveWidth = calculateEffectiveWidth(clampedWidth);
 
         // Clear previous styles if width changed
         if (clampedWidth !== currentWidth) {
@@ -1267,7 +1343,7 @@
         // Uses WIDTH_CONTAINER_SELECTOR: mx-auto, form, Composer
         processNonSidebarElements(WIDTH_CONTAINER_SELECTOR, el => {
             elementCount++;
-            if (styleElement(el, clampedWidth, true)) {
+            if (styleElement(el, effectiveWidth, true)) {
                 styledCount++;
             }
         });
@@ -1277,7 +1353,7 @@
         processNonSidebarElements('[class*="sticky"]', el => {
             processNonSidebarElements(':scope > div', child => {
                 elementCount++;
-                if (styleElement(child, clampedWidth, true)) {
+                if (styleElement(child, effectiveWidth, true)) {
                     styledCount++;
                 }
             }, el);
@@ -1285,9 +1361,13 @@
 
         // CONTENT ELEMENTS (only need max-width, no centering)
         // Uses WIDTH_CONTENT_SELECTOR: Message, Thread, Conversation
+        // P1 BUG FIX: On narrow/mobile viewports, nested content elements (.mx-auto > .Thread > .Message)
+        // must use 100% to prevent compounding (95% * 95% * 95% = 85.7%).
+        // On desktop (>=1024px), use user's configured clampedWidth.
+        const contentWidth = (getViewportWidth() < NARROW_VIEWPORT_PX) ? 100 : clampedWidth;
         processNonSidebarElements(WIDTH_CONTENT_SELECTOR, el => {
             elementCount++;
-            if (styleElement(el, clampedWidth, false)) {
+            if (styleElement(el, contentWidth, false)) {
                 styledCount++;
             }
         });
@@ -1321,7 +1401,11 @@
 
         currentWidth = clampedWidth;
         if (styledCount > 0) {
-            console.log(`[Claude Width] Applied ${clampedWidth}% width to ${styledCount}/${elementCount} elements`);
+            if (effectiveWidth !== clampedWidth) {
+                console.log(`[Claude Width] Applied ${effectiveWidth}% width (adjusted from ${clampedWidth}% for viewport) to ${styledCount}/${elementCount} elements`);
+            } else {
+                console.log(`[Claude Width] Applied ${clampedWidth}% width to ${styledCount}/${elementCount} elements`);
+            }
         }
     }
 
@@ -1597,6 +1681,7 @@
      * @param {MutationRecord[]} mutations - Array of mutation records
      */
     function handleMutations(mutations) {
+        if (typeof document === 'undefined') return;
         let needsWidthUpdate = false;
         let needsEnhancedUpdate = false;
         let relevantMutations = 0;
@@ -1666,6 +1751,31 @@
         });
 
         console.log('[Claude Width] DOM observer initialized');
+    }
+
+    /**
+     * Set up window resize listener for responsive/dynamic sizing.
+     * Reapplies width styles when viewport size changes to ensure
+     * the extension never makes the chat narrower than Claude's default.
+     */
+    function setupResizeListener() {
+        let resizeDebounceTimer = null;
+        const RESIZE_DEBOUNCE_MS = 150;
+
+        const handleResize = () => {
+            if (resizeDebounceTimer) {
+                clearTimeout(resizeDebounceTimer);
+            }
+
+            resizeDebounceTimer = setTimeout(() => {
+                console.log(`[Claude Width] Viewport resized to ${getViewportWidth()}px, reapplying styles`);
+                clearAllStyles();
+                applyWidthToChat(currentWidth);
+            }, RESIZE_DEBOUNCE_MS);
+        };
+
+        window.addEventListener('resize', handleResize);
+        console.log('[Claude Width] Resize listener initialized for dynamic sizing');
     }
 
     // =========================================================================
@@ -1796,8 +1906,9 @@
             browser.storage.onChanged.addListener(handleStorageChange);
             browser.runtime.onMessage.addListener(handleMessage);
             setupDOMObserver();
+            setupResizeListener();
 
-            console.log('[Claude Width] Content script initialized successfully');
+            console.log('[Claude Width] Content script initialized successfully with dynamic sizing');
         } catch (error) {
             console.error('[Claude Width] Initialization error:', error);
         }
@@ -1807,10 +1918,28 @@
     // ENTRY POINT
     // =========================================================================
 
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initialize);
-    } else {
-        initialize();
+    if (typeof window !== 'undefined' && !window.__TEST_ENV__) {
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initialize);
+        } else {
+            initialize();
+        }
+    }
+
+    // Expose content script utilities for testing and verification
+    if (typeof window !== 'undefined') {
+        window.__ClaudeWidthContent__ = {
+            initialize,
+            getViewportWidth,
+            calculateEffectiveWidth,
+            applyWidthToChat,
+            setupResizeListener,
+            styleElement,
+            clearAllStyles,
+            NARROW_VIEWPORT_PX,
+            MOBILE_VIEWPORT_PX,
+            MIN_EFFECTIVE_WIDTH
+        };
     }
 
 })();
