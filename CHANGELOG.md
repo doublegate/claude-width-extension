@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.2] - Flicker and Layout Stability Fix
+
+### Fixed
+- Fixed critical text flickering and layout stability issues on Claude.ai (DOU-90)
+- Synchronized CSS transition durations to 0.15s between stylesheet and dynamic injection
+- Added style property verification before skipping marked elements to prevent stale layout states
+- Fixed element candidate count logging discrepancy
+- Ensured stylesheet persistence during single-page application dynamic DOM re-renders
+
+### Changed
+- Aligned version 1.9.2 metadata across manifest, package metadata, and UI badges
+
 ## [1.9.1] - Technical Debt Remediation
 
 ### Added

@@ -1216,16 +1216,21 @@
         if (!element || !element.style) return false;
         if (isInsideSidebar(element)) return false;
 
-        // Skip if element already has the correct width applied
+        // Skip if element already has the correct width applied and styles are intact
         const currentWidthAttr = element.getAttribute(DATA_ATTR);
-        if (currentWidthAttr === String(widthPercent)) {
+        const expectedWidth = `${widthPercent}%`;
+        const hasCorrectStyles =
+            element.style.maxWidth === expectedWidth &&
+            (!setWidth || (element.style.width === expectedWidth && element.style.marginLeft === 'auto' && element.style.marginRight === 'auto'));
+
+        if (currentWidthAttr === String(widthPercent) && hasCorrectStyles) {
             styledElements.add(element);
             return false;
         }
 
-        element.style.maxWidth = `${widthPercent}%`;
+        element.style.maxWidth = expectedWidth;
         if (setWidth) {
-            element.style.width = `${widthPercent}%`;
+            element.style.width = expectedWidth;
             element.style.marginLeft = 'auto';
             element.style.marginRight = 'auto';
         }
@@ -1290,6 +1295,7 @@
         // PROSE/MARKDOWN ELEMENTS (fill their container)
         // Uses PROSE_SELECTOR: .prose, prose-*, Markdown
         processNonSidebarElements(PROSE_SELECTOR, el => {
+            elementCount++;
             if (el.style && el.style.maxWidth !== '100%') {
                 el.style.maxWidth = '100%';
                 styledElements.add(el);
@@ -1300,6 +1306,7 @@
         // CODE BLOCKS (fill container, enable horizontal scroll)
         // Uses CODE_BLOCK_SELECTOR: pre, CodeBlock
         processNonSidebarElements(CODE_BLOCK_SELECTOR, el => {
+            elementCount++;
             if (el.style) {
                 const needsMaxWidth = el.style.maxWidth !== '100%';
                 const needsOverflow = el.style.overflowX !== 'auto';
@@ -1422,7 +1429,7 @@
 
             /* Smooth transitions for styled elements */
             [${DATA_ATTR}] {
-                transition: max-width 0.2s ease-out, width 0.2s ease-out !important;
+                transition: max-width 0.15s ease-out, width 0.15s ease-out !important;
             }
 
             /* Respect reduced motion preference */
@@ -1616,6 +1623,14 @@
             if (needsWidthUpdate && needsEnhancedUpdate) break;
         }
 
+        // Ensure our style elements exist (may be removed by SPA page updates)
+        if (!document.getElementById(STYLE_ELEMENT_ID)) {
+            injectMinimalCSS();
+        }
+        if (!document.getElementById(ENHANCED_STYLE_ID)) {
+            injectEnhancedCSS();
+        }
+
         // Only apply updates if we found relevant mutations
         if (relevantMutations === 0) return;
 
@@ -1626,14 +1641,6 @@
 
         if (needsEnhancedUpdate) {
             applyEnhancedInlineStylesDebounced();
-        }
-
-        // Ensure our style elements exist (may be removed by page updates)
-        if (!document.getElementById(STYLE_ELEMENT_ID)) {
-            injectMinimalCSS();
-        }
-        if (!document.getElementById(ENHANCED_STYLE_ID)) {
-            injectEnhancedCSS();
         }
     }
 
