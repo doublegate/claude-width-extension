@@ -15,6 +15,7 @@ import {
 
 // Install browser mock globally before all tests
 installBrowserMock();
+window.__TEST_ENV__ = true;
 
 // Reset mocks before each test
 beforeEach(() => {

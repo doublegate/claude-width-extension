@@ -1326,7 +1326,7 @@
     function applyWidthToChat(widthPercent) {
         // First clamp to valid range
         const clampedWidth = Math.max(MIN_WIDTH_PERCENT, Math.min(MAX_WIDTH_PERCENT, widthPercent));
-        
+
         // Then apply dynamic sizing based on viewport width
         // This ensures we never make the chat narrower than Claude's default
         const effectiveWidth = calculateEffectiveWidth(clampedWidth);
@@ -1681,6 +1681,7 @@
      * @param {MutationRecord[]} mutations - Array of mutation records
      */
     function handleMutations(mutations) {
+        if (typeof document === 'undefined') return;
         let needsWidthUpdate = false;
         let needsEnhancedUpdate = false;
         let relevantMutations = 0;
@@ -1917,15 +1918,18 @@
     // ENTRY POINT
     // =========================================================================
 
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initialize);
-    } else {
-        initialize();
+    if (typeof window !== 'undefined' && !window.__TEST_ENV__) {
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initialize);
+        } else {
+            initialize();
+        }
     }
 
     // Expose content script utilities for testing and verification
     if (typeof window !== 'undefined') {
         window.__ClaudeWidthContent__ = {
+            initialize,
             getViewportWidth,
             calculateEffectiveWidth,
             applyWidthToChat,
