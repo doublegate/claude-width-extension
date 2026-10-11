@@ -891,6 +891,70 @@ describe('Content Script', () => {
       expect(message.style.maxWidth).toBe('100%');
     });
 
+    it('should prevent compounding width on nested Composer and form containers on narrow viewports', () => {
+      // Create representative DOM with nested Composer and form inside .mx-auto
+      createMockClaudeDOM({ withMessages: true, withComposer: true });
+
+      const container = document.querySelector('.mx-auto');
+      const composer = document.querySelector('.Composer');
+      const form = document.querySelector('form');
+      expect(container).toBeTruthy();
+      expect(composer).toBeTruthy();
+      expect(form).toBeTruthy();
+
+      // Narrow viewport (900px), user configured width 50%
+      Object.defineProperty(window, 'innerWidth', {
+        writable: true,
+        configurable: true,
+        value: 900
+      });
+
+      const { applyWidthToChat } = window.__ClaudeWidthContent__;
+      applyWidthToChat(50);
+
+      // Outer container receives 95% responsive floor
+      expect(container.style.maxWidth).toBe('95%');
+      expect(container.style.width).toBe('95%');
+
+      // Nested Composer and form must receive 100% instead of stacking the 95% floor (95% * 95% = 90.25%)
+      expect(composer.style.maxWidth).toBe('100%');
+      expect(composer.style.width).toBe('100%');
+      expect(form.style.maxWidth).toBe('100%');
+      expect(form.style.width).toBe('100%');
+    });
+
+    it('should retain inline styles without clearing all styles during window resize', async () => {
+      createMockClaudeDOM({ withMessages: true, withComposer: true });
+
+      const container = document.querySelector('.mx-auto');
+      const { applyWidthToChat } = window.__ClaudeWidthContent__;
+
+      // Start on narrow viewport (900px)
+      Object.defineProperty(window, 'innerWidth', {
+        writable: true,
+        configurable: true,
+        value: 900
+      });
+      applyWidthToChat(60);
+      expect(container.style.maxWidth).toBe('95%');
+
+      // Slightly resize viewport within narrow range (900px -> 850px)
+      Object.defineProperty(window, 'innerWidth', {
+        writable: true,
+        configurable: true,
+        value: 850
+      });
+
+      // Dispatch resize event
+      window.dispatchEvent(new Event('resize'));
+      await new Promise(resolve => setTimeout(resolve, 200));
+
+      // Style should remain intact without flicker or being wiped
+      expect(container.style.maxWidth).toBe('95%');
+      expect(container.style.width).toBe('95%');
+      expect(container.hasAttribute('data-claude-width-applied')).toBe(true);
+    });
+
     it('should dynamically update DOM styles on window resize event dispatch', async () => {
       createMockClaudeDOM({ withMessages: true, withComposer: true });
 

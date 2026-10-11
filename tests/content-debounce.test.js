@@ -13,9 +13,15 @@ import { createMockClaudeDOM, simulateRuntimeMessage, simulateStorageChange } fr
 const CONTENT_SRC = readFileSync(resolve(__dirname, '../content/content.js'), 'utf8');
 
 async function loadContentScript() {
-  new Function(CONTENT_SRC)();
-  // Let async initialize() finish and the INIT_RETRY_INTERVALS timers drain.
-  await vi.advanceTimersByTimeAsync(5000);
+  const previousTestEnv = window.__TEST_ENV__;
+  delete window.__TEST_ENV__;
+  try {
+    new Function(CONTENT_SRC)();
+    // Let async initialize() finish and the INIT_RETRY_INTERVALS timers drain.
+    await vi.advanceTimersByTimeAsync(5000);
+  } finally {
+    window.__TEST_ENV__ = previousTestEnv;
+  }
 }
 
 async function triggerObserverDebounce() {

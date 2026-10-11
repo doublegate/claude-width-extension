@@ -1341,9 +1341,14 @@
 
         // CONTAINER ELEMENTS (need max-width, width, and margin centering)
         // Uses WIDTH_CONTAINER_SELECTOR: mx-auto, form, Composer
+        // Cursor Bugbot fix: On narrow/mobile viewports (<1024px), nested containers (form/Composer)
+        // inside an outer container must use 100% so they do not compound width below the 95% floor.
+        const isNarrow = getViewportWidth() < NARROW_VIEWPORT_PX;
         processNonSidebarElements(WIDTH_CONTAINER_SELECTOR, el => {
             elementCount++;
-            if (styleElement(el, effectiveWidth, true)) {
+            const isNested = Boolean(el.parentElement && el.parentElement.closest(`${WIDTH_CONTAINER_SELECTOR}, [class*="sticky"]`));
+            const targetWidth = (isNarrow && isNested) ? 100 : effectiveWidth;
+            if (styleElement(el, targetWidth, true)) {
                 styledCount++;
             }
         });
@@ -1351,9 +1356,11 @@
         // STICKY ELEMENTS (special handling for child divs)
         // Sticky footer containers often wrap the input area
         processNonSidebarElements('[class*="sticky"]', el => {
+            const isNestedSticky = Boolean(el.parentElement && el.parentElement.closest(WIDTH_CONTAINER_SELECTOR));
+            const stickyChildWidth = (isNarrow && isNestedSticky) ? 100 : effectiveWidth;
             processNonSidebarElements(':scope > div', child => {
                 elementCount++;
-                if (styleElement(child, effectiveWidth, true)) {
+                if (styleElement(child, stickyChildWidth, true)) {
                     styledCount++;
                 }
             }, el);
@@ -1772,7 +1779,6 @@
 
             resizeDebounceTimer = setTimeout(() => {
                 console.log(`[Claude Width] Viewport resized to ${getViewportWidth()}px, reapplying styles`);
-                clearAllStyles();
                 applyWidthToChat(currentWidth);
             }, RESIZE_DEBOUNCE_MS);
         };
