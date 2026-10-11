@@ -6,12 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [1.9.2] - Flicker and Layout Stability Fix
 
+### Added
+- Dynamic Responsive Sizing: Intelligently adapts to viewport width, never making the chat narrower than Claude's default on small windows or half-screens.
+
 ### Fixed
-- Fixed critical text flickering and layout stability issues on Claude.ai (DOU-90)
-- Synchronized CSS transition durations to 0.15s between stylesheet and dynamic injection
-- Added style property verification before skipping marked elements to prevent stale layout states
-- Fixed element candidate count logging discrepancy
-- Ensured stylesheet persistence during single-page application dynamic DOM re-renders
+- Fixed nested container width compounding that caused inner elements to shrink recursively.
+- Fixed resize flicker by leveraging `requestAnimationFrame` and reading current width during debounced updates.
+- Excluded action buttons and toolbars from message container styling to prevent UI layout breakage.
+- Avoided redundant style modifications to improve performance if elements already have target widths applied.
+- Fixed critical text flickering and layout stability issues on Claude.ai (DOU-90).
+- Synchronized CSS transition durations to 0.15s between stylesheet and dynamic injection.
+- Added style property verification before skipping marked elements to prevent stale layout states.
+- Fixed element candidate count logging discrepancy.
+- Ensured stylesheet persistence during single-page application dynamic DOM re-renders.
 
 ### Changed
 - Aligned version 1.9.2 metadata across manifest, package metadata, and UI badges
