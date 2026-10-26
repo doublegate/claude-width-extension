@@ -177,7 +177,7 @@ Backup your settings or transfer them to another browser:
 
 ### Prerequisites
 
-- Node.js 20.19.0 or later
+- Node.js `^22.22.2 || ^24.15.0 || >=26.0.0`
 - npm (comes with Node.js)
 - Firefox browser for testing
 

@@ -32,18 +32,18 @@
     ]
   },
   "devDependencies": {
-    "@eslint/js": "^9.39.5",
-    "@vitest/coverage-v8": "^4.1.11",
-    "@vitest/ui": "^4.1.11",
-    "esbuild": "0.27.2",
-    "eslint": "^9.39.5",
+    "@eslint/js": "^10.0.1",
+    "@vitest/coverage-v8": "^5.0.5",
+    "@vitest/ui": "^5.0.5",
+    "esbuild": "0.28.2",
+    "eslint": "^10.13.0",
     "husky": "^9.1.7",
-    "jsdom": "^25.0.1",
-    "lint-staged": "^16.4.0",
-    "vitest": "^4.1.11"
+    "jsdom": "^30.1.3",
+    "lint-staged": "^17.6.0",
+    "vitest": "^5.0.5"
   },
   "engines": {
-    "node": ">=20.19.0"
+    "node": "^22.22.2 || ^24.15.0 || >=26.0.0"
   },
   "author": "DoubleGate",
   "license": "MIT",
