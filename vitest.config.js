@@ -73,8 +73,10 @@ export default defineConfig({
     testTimeout: 10000,
 
     // Mock browser APIs
-    deps: {
-      inline: ['jsdom']
+    server: {
+      deps: {
+        inline: ['jsdom']
+      }
     }
   }
 });
